@@ -25,7 +25,6 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Pass both db and cfg to SetupRoutes
 	router := api.SetupRoutes(db, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
