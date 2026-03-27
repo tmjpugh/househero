@@ -12,7 +12,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=builder /build/server .
-COPY --from=builder /build/home-ticket-system.html .
+COPY --from=builder /build/home-ticket-system.html /app/index.html
 
 EXPOSE 8080
 CMD ["./server"]
