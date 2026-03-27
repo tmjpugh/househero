@@ -68,14 +68,6 @@
             background: white;
             box-shadow: 2px 0 5px rgba(0,0,0,0.05);
             padding: 1rem;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar.mobile-hidden {
-            transform: translateX(-100%);
-            position: fixed;
-            z-index: 1000;
-            height: calc(100vh - 60px);
         }
 
         .nav-item {
@@ -146,47 +138,49 @@
             background: #cc0000;
         }
 
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        .home-selector {
+            display: flex;
+            align-items: center;
             gap: 1rem;
-            margin-bottom: 2rem;
+            margin: 2rem 0;
         }
 
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .stat-card h3 {
+        .home-selector button {
+            background: none;
+            border: none;
             font-size: 2rem;
-            margin-bottom: 0.5rem;
+            cursor: pointer;
+            color: #667eea;
+            padding: 0.5rem;
         }
 
-        .stat-card p {
-            color: #666;
-            font-size: 0.9rem;
+        .home-selector button:hover {
+            color: #764ba2;
         }
 
-        .ticket-list {
+        .home-selector .current {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .ticket-list, .inventory-list {
             display: grid;
             gap: 1rem;
         }
 
-        .ticket-card {
+        .ticket-card, .inventory-card {
             background: white;
             padding: 1.5rem;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            cursor: pointer;
-            transition: all 0.2s;
             border-left: 4px solid #ddd;
         }
 
-        .ticket-card:hover {
-            transform: translateX(5px);
+        .ticket-card:hover, .inventory-card:hover {
             box-shadow: 0 5px 20px rgba(0,0,0,0.12);
         }
 
@@ -202,10 +196,16 @@
             border-left-color: #10b981;
         }
 
-        .ticket-title {
+        .card-title {
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
         }
 
         .badge {
@@ -214,11 +214,19 @@
             border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 500;
+            margin-right: 0.5rem;
+            margin-bottom: 0.75rem;
         }
 
         .badge-status {
             background: #e0e7ff;
             color: #4338ca;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
         }
 
         .modal-overlay {
@@ -310,14 +318,11 @@
             padding: 0;
             width: 30px;
             height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
         }
 
         .close-btn:hover {
             background: #f0f0f0;
+            border-radius: 50%;
         }
 
         .loading {
@@ -338,10 +343,6 @@
             padding: 1rem;
             background: #f9f9f9;
             border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        .file-input-wrapper {
             margin-bottom: 1rem;
         }
 
@@ -378,15 +379,6 @@
             cursor: pointer;
         }
 
-        .file-item-name {
-            font-size: 0.75rem;
-            padding: 0.25rem;
-            text-align: center;
-            word-break: break-all;
-            background: white;
-            border-top: 1px solid #ddd;
-        }
-
         .file-item-delete {
             position: absolute;
             top: -8px;
@@ -399,61 +391,11 @@
             height: 28px;
             cursor: pointer;
             font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .file-item-delete:hover {
-            background: #cc0000;
-        }
-
-        .inventory-list {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .inventory-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .inventory-card:hover {
-            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
         }
 
         @media (max-width: 768px) {
-            .menu-toggle {
-                display: block;
-            }
-
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: 60px;
-                height: calc(100vh - 60px);
-                z-index: 1000;
-                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            }
-
-            .sidebar.mobile-hidden {
-                transform: translateX(-100%);
-            }
-
-            .content {
-                padding: 1rem;
-            }
-
             .form-row {
                 grid-template-columns: 1fr;
-            }
-
-            .file-gallery {
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             }
         }
     </style>
@@ -464,81 +406,102 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // API Helper
+        // Simple API helper
         const api = {
             get: async (endpoint) => {
-                const response = await fetch(endpoint);
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
+                try {
+                    const response = await fetch(endpoint);
+                    if (!response.ok) throw new Error('API Error');
+                    return response.json();
+                } catch (err) {
+                    console.error('GET error:', endpoint, err);
+                    throw err;
+                }
             },
             post: async (endpoint, data) => {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('API Error');
+                    return response.json();
+                } catch (err) {
+                    console.error('POST error:', endpoint, err);
+                    throw err;
+                }
             },
             put: async (endpoint, data) => {
-                const response = await fetch(endpoint, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('API Error');
+                    return response.json();
+                } catch (err) {
+                    console.error('PUT error:', endpoint, err);
+                    throw err;
+                }
             },
             delete: async (endpoint) => {
-                const response = await fetch(endpoint, { method: 'DELETE' });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
-            },
-            uploadFile: async (endpoint, file, fieldName = 'photo') => {
-                const formData = new FormData();
-                formData.append(fieldName, file);
-                formData.append('name', file.name);
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!response.ok) throw new Error('Upload Error');
-                return response.json();
-            },
-            deleteFile: async (fileType, filename) => {
-                const response = await fetch(`/api/uploads/${fileType}/${filename}`, {
-                    method: 'DELETE'
-                });
-                if (!response.ok) throw new Error('Delete Error');
-                return response.json();
+                try {
+                    const response = await fetch(endpoint, { method: 'DELETE' });
+                    if (!response.ok) throw new Error('API Error');
+                    return response.json();
+                } catch (err) {
+                    console.error('DELETE error:', endpoint, err);
+                    throw err;
+                }
             }
         };
 
         function App() {
-            const [currentHome, setCurrentHome] = useState(null);
+            const [homes, setHomes] = useState([]);
+            const [currentHomeIdx, setCurrentHomeIdx] = useState(0);
             const [view, setView] = useState('tickets');
             const [tickets, setTickets] = useState([]);
             const [inventory, setInventory] = useState([]);
             const [showModal, setShowModal] = useState(null);
             const [modalData, setModalData] = useState({});
-            const [sidebarOpen, setSidebarOpen] = useState(true);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
 
             useEffect(() => {
-                if (view === 'tickets') loadTickets();
-                if (view === 'inventory') loadInventory();
-            }, [currentHome, view]);
+                loadHomes();
+            }, []);
+
+            useEffect(() => {
+                if (homes.length > 0) {
+                    if (view === 'tickets') loadTickets();
+                    if (view === 'inventory') loadInventory();
+                }
+            }, [currentHomeIdx, view, homes]);
+
+            const loadHomes = async () => {
+                try {
+                    const data = await api.get('/api/homes');
+                    setHomes(data || []);
+                    setError('');
+                } catch (err) {
+                    setError('Failed to load homes');
+                    setHomes([]);
+                }
+            };
 
             const loadTickets = async () => {
-                if (!currentHome) return;
+                if (homes.length === 0) return;
                 setLoading(true);
                 try {
-                    const data = await api.get(`/api/tickets?home_id=${currentHome}`);
+                    const homeId = homes[currentHomeIdx]?.id;
+                    const data = await api.get(`/api/tickets?home_id=${homeId}`);
                     setTickets(data || []);
                     setError('');
                 } catch (err) {
                     setError('Failed to load tickets');
+                    setTickets([]);
                 }
                 setLoading(false);
             };
@@ -551,6 +514,7 @@
                     setError('');
                 } catch (err) {
                     setError('Failed to load inventory');
+                    setInventory([]);
                 }
                 setLoading(false);
             };
@@ -559,7 +523,7 @@
                 try {
                     const newTicket = await api.post('/api/tickets', {
                         ...ticket,
-                        home_id: currentHome,
+                        home_id: homes[currentHomeIdx].id,
                         status: 'open'
                     });
                     setTickets([...tickets, newTicket]);
@@ -582,6 +546,7 @@
             };
 
             const deleteTicket = async (ticketId) => {
+                if (!window.confirm('Delete this ticket?')) return;
                 try {
                     await api.delete(`/api/tickets/${ticketId}`);
                     setTickets(tickets.filter(t => t.id !== ticketId));
@@ -595,7 +560,7 @@
                 try {
                     const newItem = await api.post('/api/inventory', {
                         ...item,
-                        home_id: currentHome
+                        home_id: homes[currentHomeIdx].id
                     });
                     setInventory([...inventory, newItem]);
                     setShowModal(null);
@@ -617,6 +582,7 @@
             };
 
             const deleteInventoryItem = async (itemId) => {
+                if (!window.confirm('Delete this item?')) return;
                 try {
                     await api.delete(`/api/inventory/${itemId}`);
                     setInventory(inventory.filter(i => i.id !== itemId));
@@ -626,7 +592,7 @@
                 }
             };
 
-            if (!currentHome) {
+            if (homes.length === 0) {
                 return (
                     <div className="app">
                         <header className="header">
@@ -635,49 +601,39 @@
                             </div>
                         </header>
                         <div className="content">
-                            <h2>Select Home</h2>
-                            <div style={{ marginTop: '2rem' }}>
-                                <input
-                                    type="number"
-                                    placeholder="Enter Home ID"
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            setCurrentHome(parseInt(e.target.value));
-                                        }
-                                    }}
-                                    style={{ padding: '0.75rem', fontSize: '1rem', marginRight: '1rem', width: '200px' }}
-                                />
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                        const homeId = prompt('Enter Home ID:');
-                                        if (homeId) setCurrentHome(parseInt(homeId));
-                                    }}
-                                >
-                                    Select Home
-                                </button>
-                            </div>
+                            {error && <div className="error">{error}</div>}
+                            <h2>Loading homes...</h2>
+                            <p>Make sure you have homes in your database.</p>
                         </div>
                     </div>
                 );
             }
 
+            const currentHome = homes[currentHomeIdx];
+
             return (
                 <div className="app">
                     <header className="header">
                         <div className="header-content">
-                            <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                                ☰
-                            </button>
-                            <h1>Home Maintenance (ID: {currentHome})</h1>
-                            <button className="btn btn-secondary" onClick={() => setCurrentHome(null)}>
-                                Change Home
-                            </button>
+                            <h1>Home Maintenance Tracker</h1>
                         </div>
                     </header>
 
                     <div className="main-layout">
-                        <aside className={`sidebar ${!sidebarOpen ? 'mobile-hidden' : ''}`}>
+                        <aside className="sidebar">
+                            <div className="home-selector">
+                                <button onClick={() => setCurrentHomeIdx((i) => (i > 0 ? i - 1 : homes.length - 1))}>
+                                    ▲
+                                </button>
+                                <div className="current">
+                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Home</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{currentHome.name}</div>
+                                </div>
+                                <button onClick={() => setCurrentHomeIdx((i) => (i < homes.length - 1 ? i + 1 : 0))}>
+                                    ▼
+                                </button>
+                            </div>
+
                             <nav>
                                 <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`}
                                      onClick={() => setView('tickets')}>
@@ -706,23 +662,19 @@
                                         <div className="loading">Loading tickets...</div>
                                     ) : (
                                         <div className="ticket-list">
-                                            {tickets && tickets.length > 0 ? (
+                                            {tickets.length > 0 ? (
                                                 tickets.map(ticket => (
                                                     <div key={ticket.id} className={`ticket-card priority-${ticket.priority}`}>
-                                                        <div className="ticket-title">{ticket.title}</div>
-                                                        <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
-                                                            {ticket.description?.substring(0, 100)}
-                                                        </div>
-                                                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                                                        <div className="card-title">{ticket.title}</div>
+                                                        <div className="card-description">{ticket.description}</div>
+                                                        <div>
                                                             <span className="badge badge-status">{ticket.status}</span>
-                                                            <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
-                                                                {ticket.priority}
-                                                            </span>
+                                                            <span className="badge">{ticket.priority}</span>
+                                                            {ticket.room && <span className="badge">{ticket.room}</span>}
                                                         </div>
-                                                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                                                        <div className="card-actions">
                                                             <button
                                                                 className="btn btn-secondary"
-                                                                style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
                                                                 onClick={() => {
                                                                     setModalData(ticket);
                                                                     setShowModal('edit-ticket');
@@ -741,7 +693,7 @@
                                                 ))
                                             ) : (
                                                 <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                                    No tickets yet. Create your first one!
+                                                    No tickets yet
                                                 </div>
                                             )}
                                         </div>
@@ -762,22 +714,18 @@
                                         <div className="loading">Loading inventory...</div>
                                     ) : (
                                         <div className="inventory-list">
-                                            {inventory && inventory.length > 0 ? (
+                                            {inventory.length > 0 ? (
                                                 inventory.map(item => (
                                                     <div key={item.id} className="inventory-card">
-                                                        <div className="ticket-title">{item.name}</div>
-                                                        <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
-                                                            {item.description?.substring(0, 100)}
+                                                        <div className="card-title">{item.name}</div>
+                                                        <div className="card-description">{item.description}</div>
+                                                        <div>
+                                                            {item.location && <span className="badge">{item.location}</span>}
+                                                            {item.type && <span className="badge">{item.type}</span>}
                                                         </div>
-                                                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                                            <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
-                                                                {item.location}
-                                                            </span>
-                                                        </div>
-                                                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                                                        <div className="card-actions">
                                                             <button
                                                                 className="btn btn-secondary"
-                                                                style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
                                                                 onClick={() => {
                                                                     setModalData(item);
                                                                     setShowModal('edit-inventory');
@@ -796,7 +744,7 @@
                                                 ))
                                             ) : (
                                                 <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                                    No inventory items yet. Add your first item!
+                                                    No inventory items yet
                                                 </div>
                                             )}
                                         </div>
@@ -810,34 +758,27 @@
                     {showModal === 'add-ticket' && (
                         <AddTicketModal onClose={() => setShowModal(null)} onSave={addTicket} />
                     )}
-
                     {showModal === 'edit-ticket' && (
-                        <EditTicketModal ticket={modalData} onClose={() => setShowModal(null)} onSave={(updates) => updateTicket(modalData.id, updates)} error={error} setError={setError} />
+                        <EditTicketModal ticket={modalData} onClose={() => setShowModal(null)} onSave={(u) => updateTicket(modalData.id, u)} />
                     )}
-
                     {showModal === 'add-inventory' && (
                         <AddInventoryModal onClose={() => setShowModal(null)} onSave={addInventoryItem} />
                     )}
-
                     {showModal === 'edit-inventory' && (
-                        <EditInventoryModal item={modalData} onClose={() => setShowModal(null)} onSave={(updates) => updateInventoryItem(modalData.id, updates)} error={error} setError={setError} />
+                        <EditInventoryModal item={modalData} onClose={() => setShowModal(null)} onSave={(u) => updateInventoryItem(modalData.id, u)} />
                     )}
                 </div>
             );
         }
 
-        // TICKET MODALS
-
         function AddTicketModal({ onClose, onSave }) {
-            const [formData, setFormData] = useState({
+            const [form, setForm] = useState({
                 title: '',
                 description: '',
                 type: 'Repair Request',
                 priority: 'medium',
                 requester: 'Self',
-                room: 'Kitchen',
-                inventory_item: '',
-                estimated_cost: ''
+                room: ''
             });
 
             return (
@@ -850,33 +791,24 @@
                         <div className="modal-body">
                             <div className="form-group">
                                 <label>Title *</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                    placeholder="Brief description of the issue"
-                                />
+                                <input type="text" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    placeholder="Detailed description..."
-                                />
+                                <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Type *</label>
-                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                    <label>Type</label>
+                                    <select value={form.type} onChange={(e) => setForm({...form, type: e.target.value})}>
                                         <option>Repair Request</option>
                                         <option>Maintenance</option>
                                         <option>Upgrade</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Priority *</label>
-                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                    <label>Priority</label>
+                                    <select value={form.priority} onChange={(e) => setForm({...form, priority: e.target.value})}>
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
@@ -885,149 +817,26 @@
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Requester *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.requester}
-                                        onChange={(e) => setFormData({...formData, requester: e.target.value})}
-                                    />
+                                    <label>Room</label>
+                                    <input type="text" value={form.room} onChange={(e) => setForm({...form, room: e.target.value})} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Room *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Inventory Item</label>
-                                    <input
-                                        type="text"
-                                        value={formData.inventory_item}
-                                        onChange={(e) => setFormData({...formData, inventory_item: e.target.value})}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Estimated Cost</label>
-                                    <input
-                                        type="text"
-                                        value={formData.estimated_cost}
-                                        onChange={(e) => setFormData({...formData, estimated_cost: e.target.value})}
-                                    />
+                                    <label>Requester</label>
+                                    <input type="text" value={form.requester} onChange={(e) => setForm({...form, requester: e.target.value})} />
                                 </div>
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => formData.title && onSave(formData)}
-                                disabled={!formData.title}
-                            >
-                                Create Ticket
-                            </button>
+                            <button className="btn btn-primary" onClick={() => form.title && onSave(form)}>Create</button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        function EditTicketModal({ ticket, onClose, onSave, error, setError }) {
-            const [formData, setFormData] = useState(ticket);
-            const [uploading, setUploading] = useState(false);
-
-            const handleFileUpload = async (file, fileType, endpoint, fieldName) => {
-                if (!file) return;
-
-                setUploading(true);
-                try {
-                    const uploadedFile = await api.uploadFile(endpoint, file, fieldName);
-                    
-                    const fileArrayKey = fileType === 'photo' ? 'photos' : 'documents';
-                    setFormData({
-                        ...formData,
-                        [fileArrayKey]: [...(formData[fileArrayKey] || []), uploadedFile]
-                    });
-                    setError('');
-                } catch (err) {
-                    setError(`Failed to upload ${fileType}`);
-                }
-                setUploading(false);
-            };
-
-            const handleDeleteFile = async (fileType, filename) => {
-                try {
-                    await api.deleteFile(fileType, filename);
-                    
-                    const fileArrayKey = fileType === 'photo' ? 'photos' : 'documents';
-                    setFormData({
-                        ...formData,
-                        [fileArrayKey]: formData[fileArrayKey].filter(f => !f.url.includes(filename))
-                    });
-                    setError('');
-                } catch (err) {
-                    setError('Failed to delete file');
-                }
-            };
-
-            const renderFileSection = (title, files, fileType, endpoint, fieldName = 'photo') => (
-                <div className="file-upload-section">
-                    <label style={{ fontWeight: 600, marginBottom: '0.75rem', display: 'block' }}>{title}</label>
-                    <div className="file-input-wrapper">
-                        <input
-                            type="file"
-                            onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                    handleFileUpload(e.target.files[0], fileType, endpoint, fieldName);
-                                }
-                            }}
-                            disabled={uploading}
-                        />
-                    </div>
-                    {files && files.length > 0 && (
-                        <div className="file-gallery">
-                            {files.map(file => {
-                                const filename = file.url.split('/').pop();
-                                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.url);
-                                
-                                return (
-                                    <div key={file.id} className="file-item">
-                                        {isImage ? (
-                                            <>
-                                                <img 
-                                                    src={file.url} 
-                                                    alt={file.name}
-                                                    onClick={() => window.open(file.url, '_blank')}
-                                                />
-                                                <div className="file-item-name">{file.name}</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div 
-                                                    className="file-item-document"
-                                                    onClick={() => window.open(file.url, '_blank')}
-                                                >
-                                                    📄
-                                                </div>
-                                                <div className="file-item-name">{file.name}</div>
-                                            </>
-                                        )}
-                                        <button
-                                            className="file-item-delete"
-                                            onClick={() => handleDeleteFile(fileType, filename)}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            );
+        function EditTicketModal({ ticket, onClose, onSave }) {
+            const [form, setForm] = useState(ticket);
 
             return (
                 <div className="modal-overlay" onClick={onClose}>
@@ -1037,91 +846,65 @@
                             <button className="close-btn" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
-                            {error && <div className="error">{error}</div>}
-                            
                             <div className="form-group">
-                                <label>Title *</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                />
+                                <label>Title</label>
+                                <input type="text" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea
-                                    value={formData.description || ''}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                />
+                                <textarea value={form.description || ''} onChange={(e) => setForm({...form, description: e.target.value})} />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Room *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
+                                    <label>Room</label>
+                                    <input type="text" value={form.room || ''} onChange={(e) => setForm({...form, room: e.target.value})} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Inventory Item</label>
-                                    <input
-                                        type="text"
-                                        value={formData.inventory_item || ''}
-                                        onChange={(e) => setFormData({...formData, inventory_item: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Status *</label>
-                                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                                    <label>Status</label>
+                                    <select value={form.status || 'open'} onChange={(e) => setForm({...form, status: e.target.value})}>
                                         <option value="open">Open</option>
                                         <option value="in-progress">In Progress</option>
                                         <option value="waiting">Waiting</option>
                                         <option value="closed">Closed</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div className="form-row">
                                 <div className="form-group">
-                                    <label>Priority *</label>
-                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                    <label>Priority</label>
+                                    <select value={form.priority || 'medium'} onChange={(e) => setForm({...form, priority: e.target.value})}>
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
                                     </select>
                                 </div>
+                                <div className="form-group">
+                                    <label>Type</label>
+                                    <select value={form.type || 'Repair Request'} onChange={(e) => setForm({...form, type: e.target.value})}>
+                                        <option>Repair Request</option>
+                                        <option>Maintenance</option>
+                                        <option>Upgrade</option>
+                                    </select>
+                                </div>
                             </div>
-
-                            {/* FILE UPLOADS */}
-                            {renderFileSection('Photos', formData.photos, 'photo', `/api/tickets/${ticket.id}/photos`, 'photo')}
-                            {renderFileSection('Documents', formData.documents, 'document', `/api/tickets/${ticket.id}/documents`, 'document')}
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => onSave(formData)}
-                                disabled={uploading}
-                            >
-                                Save Changes
-                            </button>
+                            <button className="btn btn-primary" onClick={() => onSave(form)}>Save</button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        // INVENTORY MODALS
-
         function AddInventoryModal({ onClose, onSave }) {
-            const [formData, setFormData] = useState({
+            const [form, setForm] = useState({
                 name: '',
-                description: '',
-                location: 'Kitchen',
-                manufacturer: '',
+                type: '',
+                make: '',
                 model: '',
-                purchase_date: '',
-                warranty_expires: ''
+                room: '',
+                description: ''
             });
 
             return (
@@ -1134,258 +917,85 @@
                         <div className="modal-body">
                             <div className="form-group">
                                 <label>Name *</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    placeholder="e.g., Kitchen Refrigerator"
-                                />
+                                <input type="text" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    placeholder="Details about the item..."
-                                />
+                                <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Location *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                                    />
+                                    <label>Type</label>
+                                    <input type="text" value={form.type} onChange={(e) => setForm({...form, type: e.target.value})} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Manufacturer</label>
-                                    <input
-                                        type="text"
-                                        value={formData.manufacturer}
-                                        onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
-                                    />
+                                    <label>Room</label>
+                                    <input type="text" value={form.room} onChange={(e) => setForm({...form, room: e.target.value})} />
                                 </div>
                             </div>
                             <div className="form-row">
+                                <div className="form-group">
+                                    <label>Make</label>
+                                    <input type="text" value={form.make} onChange={(e) => setForm({...form, make: e.target.value})} />
+                                </div>
                                 <div className="form-group">
                                     <label>Model</label>
-                                    <input
-                                        type="text"
-                                        value={formData.model}
-                                        onChange={(e) => setFormData({...formData, model: e.target.value})}
-                                    />
+                                    <input type="text" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
                                 </div>
-                                <div className="form-group">
-                                    <label>Purchase Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.purchase_date}
-                                        onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Warranty Expires</label>
-                                <input
-                                    type="date"
-                                    value={formData.warranty_expires}
-                                    onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
-                                />
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => formData.name && onSave(formData)}
-                                disabled={!formData.name}
-                            >
-                                Create Item
-                            </button>
+                            <button className="btn btn-primary" onClick={() => form.name && onSave(form)}>Create</button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        function EditInventoryModal({ item, onClose, onSave, error, setError }) {
-            const [formData, setFormData] = useState(item);
-            const [uploading, setUploading] = useState(false);
-
-            const handleFileUpload = async (file, fileType, endpoint, fieldName) => {
-                if (!file) return;
-
-                setUploading(true);
-                try {
-                    const uploadedFile = await api.uploadFile(endpoint, file, fieldName);
-                    
-                    const fileArrayKey = fileType === 'receipt' ? 'receipts' : 'manuals';
-                    setFormData({
-                        ...formData,
-                        [fileArrayKey]: [...(formData[fileArrayKey] || []), uploadedFile]
-                    });
-                    setError('');
-                } catch (err) {
-                    setError(`Failed to upload ${fileType}`);
-                }
-                setUploading(false);
-            };
-
-            const handleDeleteFile = async (fileType, filename) => {
-                try {
-                    await api.deleteFile(fileType, filename);
-                    
-                    const fileArrayKey = fileType === 'receipt' ? 'receipts' : 'manuals';
-                    setFormData({
-                        ...formData,
-                        [fileArrayKey]: formData[fileArrayKey].filter(f => !f.url.includes(filename))
-                    });
-                    setError('');
-                } catch (err) {
-                    setError('Failed to delete file');
-                }
-            };
-
-            const renderFileSection = (title, files, fileType, endpoint, fieldName = 'receipt') => (
-                <div className="file-upload-section">
-                    <label style={{ fontWeight: 600, marginBottom: '0.75rem', display: 'block' }}>{title}</label>
-                    <div className="file-input-wrapper">
-                        <input
-                            type="file"
-                            onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                    handleFileUpload(e.target.files[0], fileType, endpoint, fieldName);
-                                }
-                            }}
-                            disabled={uploading}
-                        />
-                    </div>
-                    {files && files.length > 0 && (
-                        <div className="file-gallery">
-                            {files.map(file => {
-                                const filename = file.url.split('/').pop();
-                                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.url);
-                                
-                                return (
-                                    <div key={file.id} className="file-item">
-                                        {isImage ? (
-                                            <>
-                                                <img 
-                                                    src={file.url} 
-                                                    alt={file.name}
-                                                    onClick={() => window.open(file.url, '_blank')}
-                                                />
-                                                <div className="file-item-name">{file.name}</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div 
-                                                    className="file-item-document"
-                                                    onClick={() => window.open(file.url, '_blank')}
-                                                >
-                                                    📄
-                                                </div>
-                                                <div className="file-item-name">{file.name}</div>
-                                            </>
-                                        )}
-                                        <button
-                                            className="file-item-delete"
-                                            onClick={() => handleDeleteFile(fileType, filename)}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            );
+        function EditInventoryModal({ item, onClose, onSave }) {
+            const [form, setForm] = useState(item);
 
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>Edit Inventory Item #{item.id}</h2>
+                            <h2>Edit Item #{item.id}</h2>
                             <button className="close-btn" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
-                            {error && <div className="error">{error}</div>}
-                            
                             <div className="form-group">
-                                <label>Name *</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                />
+                                <label>Name</label>
+                                <input type="text" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea
-                                    value={formData.description || ''}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                />
+                                <textarea value={form.description || ''} onChange={(e) => setForm({...form, description: e.target.value})} />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Location *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                                    />
+                                    <label>Type</label>
+                                    <input type="text" value={form.type || ''} onChange={(e) => setForm({...form, type: e.target.value})} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Manufacturer</label>
-                                    <input
-                                        type="text"
-                                        value={formData.manufacturer || ''}
-                                        onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
-                                    />
+                                    <label>Room</label>
+                                    <input type="text" value={form.room || ''} onChange={(e) => setForm({...form, room: e.target.value})} />
                                 </div>
                             </div>
                             <div className="form-row">
+                                <div className="form-group">
+                                    <label>Make</label>
+                                    <input type="text" value={form.make || ''} onChange={(e) => setForm({...form, make: e.target.value})} />
+                                </div>
                                 <div className="form-group">
                                     <label>Model</label>
-                                    <input
-                                        type="text"
-                                        value={formData.model || ''}
-                                        onChange={(e) => setFormData({...formData, model: e.target.value})}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Purchase Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.purchase_date || ''}
-                                        onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
-                                    />
+                                    <input type="text" value={form.model || ''} onChange={(e) => setForm({...form, model: e.target.value})} />
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label>Warranty Expires</label>
-                                <input
-                                    type="date"
-                                    value={formData.warranty_expires || ''}
-                                    onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
-                                />
-                            </div>
-
-                            {/* FILE UPLOADS */}
-                            {renderFileSection('Receipts', formData.receipts, 'receipt', `/api/inventory/${item.id}/receipts`, 'receipt')}
-                            {renderFileSection('Manuals', formData.manuals, 'manual', `/api/inventory/${item.id}/manuals`, 'manual')}
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => onSave(formData)}
-                                disabled={uploading}
-                            >
-                                Save Changes
-                            </button>
+                            <button className="btn btn-primary" onClick={() => onSave(form)}>Save</button>
                         </div>
                     </div>
                 </div>
@@ -1394,6 +1004,5 @@
 
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-
 </body>
 </html>
