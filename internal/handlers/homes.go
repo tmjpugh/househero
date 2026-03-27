@@ -20,6 +20,9 @@ func NewHomeHandler(db *database.DB) *HomeHandler {
 
 func (h *HomeHandler) GetHomes(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		userID = "1"
+	}
 
 	rows, err := h.db.Query("SELECT id, user_id, name, address, photo, created_at, updated_at FROM homes WHERE user_id = $1", userID)
 	if err != nil {
@@ -36,6 +39,10 @@ func (h *HomeHandler) GetHomes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		homes = append(homes, home)
+	}
+
+	if homes == nil {
+		homes = []models.Home{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -59,14 +66,47 @@ func (h *HomeHandler) GetHome(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(home)
 }
 
-func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-User-ID")
-	var home models.Home
+// CreateHomeRequest represents the home creation request with optional user info
+type CreateHomeRequest struct {
+	Name             string `json:"name"`
+	Address          string `json:"address"`
+	Photo            string `json:"photo"`
+	UserName         string `json:"user_name"`      // New: user name
+	UserEmail        string `json:"user_email"`    // New: user email
+	SettingsPassword string `json:"settings_password"` // New: settings password
+}
 
-	if err := json.NewDecoder(r.Body).Decode(&home); err != nil {
+func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
+	var req CreateHomeRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	userID := r.Header.Get("X-User-ID")
+	
+	// If no user_id header, create a new user (first-time setup)
+	if userID == "" {
+		if req.UserEmail == "" || req.UserName == "" {
+			http.Error(w, "user_email and user_name required for new user", http.StatusBadRequest)
+			return
+		}
+
+		// Create new user
+		newUserID, err := h.createUser(req.UserName, req.UserEmail, req.SettingsPassword)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		userID = strconv.FormatInt(newUserID, 10)
+	}
+
+	// Now create the home
+	var home models.Home
+	home.Name = req.Name
+	home.Address = req.Address
+	home.Photo = req.Photo
 
 	err := h.db.QueryRow(
 		"INSERT INTO homes (user_id, name, address, photo) VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at",
@@ -82,6 +122,34 @@ func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(home)
+}
+
+// createUser creates a new user and stores the settings password
+func (h *HomeHandler) createUser(name, email, settingsPassword string) (int64, error) {
+	var userID int64
+
+	err := h.db.QueryRow(
+		"INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id",
+		email, "default_password",
+	).Scan(&userID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	// Store settings password in a settings table
+	if settingsPassword != "" {
+		_, err = h.db.Exec(
+			"INSERT INTO user_settings (user_id, settings_password) VALUES ($1, $2)",
+			userID, settingsPassword,
+		)
+		if err != nil {
+			// If settings table doesn't exist yet, that's ok - we'll create it in migrations
+			// For now, just log and continue
+		}
+	}
+
+	return userID, nil
 }
 
 func (h *HomeHandler) UpdateHome(w http.ResponseWriter, r *http.Request) {

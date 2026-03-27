@@ -26,6 +26,7 @@
             flex-direction: column;
         }
 
+        /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -39,10 +40,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 0.5rem;
         }
 
         .header h1 {
             font-size: 1.5rem;
+            flex: 1;
+            min-width: 0;
         }
 
         .menu-toggle {
@@ -53,8 +57,11 @@
             cursor: pointer;
             padding: 0.5rem;
             display: none;
+            min-width: 44px;
+            min-height: 44px;
         }
 
+        /* Main Layout */
         .main-layout {
             display: flex;
             flex: 1;
@@ -63,11 +70,23 @@
             width: 100%;
         }
 
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background: white;
             box-shadow: 2px 0 5px rgba(0,0,0,0.05);
             padding: 1rem;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar.mobile-hidden {
+            transform: translateX(-100%);
+            position: fixed;
+            z-index: 1000;
+            height: calc(100vh - 60px);
+            left: 0;
+            top: 60px;
         }
 
         .nav-item {
@@ -79,6 +98,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            min-height: 44px;
         }
 
         .nav-item:hover {
@@ -90,12 +110,113 @@
             color: white;
         }
 
+        /* Content Area */
         .content {
             flex: 1;
             padding: 1.5rem;
             overflow-y: auto;
         }
 
+        /* Home Selection */
+        .home-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem 0;
+        }
+
+        .home-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-height: 280px;
+        }
+
+        .home-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .home-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .home-info {
+            padding: 1rem;
+        }
+
+        .home-info h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .home-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .add-home-card {
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            font-size: 3rem;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 12px;
+            background: white;
+        }
+
+        .add-home-card:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stat-card.high {
+            border-left: 4px solid #ef4444;
+        }
+
+        .stat-card.medium {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .stat-card.low {
+            border-left: 4px solid #10b981;
+        }
+
+        /* Buttons */
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -106,6 +227,8 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            min-height: 44px;
+            min-width: 44px;
         }
 
         .btn-primary {
@@ -118,6 +241,12 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-secondary {
             background: #f0f0f0;
             color: #333;
@@ -127,60 +256,70 @@
             background: #e0e0e0;
         }
 
-        .btn-danger {
-            background: #ff4444;
-            color: white;
-            padding: 0.5rem 1rem;
-            font-size: 0.85rem;
-        }
-
-        .btn-danger:hover {
-            background: #cc0000;
-        }
-
-        .home-selector {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin: 2rem 0;
-        }
-
-        .home-selector button {
-            background: none;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            color: #667eea;
-            padding: 0.5rem;
-        }
-
-        .home-selector button:hover {
-            color: #764ba2;
-        }
-
-        .home-selector .current {
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            min-width: 250px;
+        /* Loading & Error */
+        .loading {
             text-align: center;
+            padding: 2rem;
+            color: #666;
         }
 
-        .ticket-list, .inventory-list {
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        /* Ticket List */
+        .ticket-list {
             display: grid;
             gap: 1rem;
         }
 
-        .ticket-card, .inventory-card {
+        .ticket-card {
             background: white;
             padding: 1.5rem;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
             border-left: 4px solid #ddd;
         }
 
-        .ticket-card:hover, .inventory-card:hover {
+        .ticket-card:hover {
+            transform: translateX(5px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.12);
         }
 
@@ -196,16 +335,44 @@
             border-left-color: #10b981;
         }
 
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+        .ticket-card.aged-high {
+            background: #fef2f2;
         }
 
-        .card-description {
-            color: #666;
-            font-size: 0.9rem;
+        .ticket-card.aged-medium {
+            background: #fffbeb;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
             margin-bottom: 0.75rem;
+            gap: 0.5rem;
+        }
+
+        .ticket-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .ticket-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .clickable-field {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .clickable-field:hover {
+            color: #764ba2;
         }
 
         .badge {
@@ -214,8 +381,6 @@
             border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 500;
-            margin-right: 0.5rem;
-            margin-bottom: 0.75rem;
         }
 
         .badge-status {
@@ -223,12 +388,12 @@
             color: #4338ca;
         }
 
-        .card-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
+        .badge-priority {
+            background: #fee2e2;
+            color: #991b1b;
         }
 
+        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -275,6 +440,7 @@
             display: flex;
             gap: 1rem;
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
 
         .form-group {
@@ -316,86 +482,315 @@
             cursor: pointer;
             color: #666;
             padding: 0;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            min-height: 44px;
+            min-width: 44px;
         }
 
         .close-btn:hover {
             background: #f0f0f0;
-            border-radius: 50%;
         }
 
-        .loading {
-            text-align: center;
-            padding: 2rem;
+        /* Inventory */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .inventory-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inventory-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        }
+
+        .inventory-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .inventory-icons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .inventory-icon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .inventory-icon-group:hover {
+            opacity: 0.7;
+        }
+
+        .inventory-icon-count {
+            font-size: 0.85rem;
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .inventory-details {
+            font-size: 0.9rem;
             color: #666;
         }
 
-        .error {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
+        .inventory-details div {
+            margin-bottom: 0.5rem;
         }
 
-        .file-upload-section {
-            padding: 1rem;
-            background: #f9f9f9;
-            border-radius: 8px;
+        .room-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
             margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
-        .file-gallery {
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .room-header h3 {
+            font-size: 1.3rem;
+        }
+
+        .room-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .photo-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .photos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
 
-        .file-item {
+        .photo-item {
             position: relative;
-            border: 1px solid #ddd;
             border-radius: 8px;
             overflow: hidden;
-            aspect-ratio: 1;
         }
 
-        .file-item img {
+        .photo-item img {
             width: 100%;
-            height: 100%;
+            height: 150px;
             object-fit: cover;
-            cursor: pointer;
         }
 
-        .file-item-document {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f0f0f0;
-            font-size: 2rem;
-            cursor: pointer;
-        }
-
-        .file-item-delete {
+        .photo-item .delete-photo {
             position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #ff4444;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0,0,0,0.7);
             color: white;
             border: none;
             border-radius: 50%;
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
-            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            min-width: 44px;
         }
 
+        .multi-select-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .multi-select-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #e0e7ff;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .multi-select-item input {
+            margin: 0;
+            width: auto;
+        }
+
+        .linked-tickets {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .linked-ticket-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+            cursor: pointer;
+        }
+
+        .linked-ticket-item:hover {
+            background: #f0f0f0;
+        }
+
+        .person-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .person-header {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .person-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .comment {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .comment.system-comment {
+            background: #e0e7ff;
+            border-left: 3px solid #4338ca;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .comment-body {
+            color: #333;
+        }
+
+        .comments-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e5e5e5;
+        }
+
+        .file-list {
+            margin-top: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 60px;
+                height: calc(100vh - 60px);
+                z-index: 1000;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar.mobile-hidden {
+                transform: translateX(-100%);
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
             .form-row {
                 grid-template-columns: 1fr;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .ticket-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .inventory-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .home-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .modal {
+                max-height: 100vh;
             }
         }
     </style>
@@ -406,379 +801,1490 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Simple API helper
-        const api = {
-            get: async (endpoint) => {
-                try {
-                    const response = await fetch(endpoint);
-                    if (!response.ok) throw new Error('API Error');
-                    return response.json();
-                } catch (err) {
-                    console.error('GET error:', endpoint, err);
-                    throw err;
-                }
+        // API Client
+const dbApi = {
+    getHomes: async () => {
+        const res = await fetch('/api/homes');
+        if (!res.ok) throw new Error('Failed to load homes');
+        return res.json() || [];
+    },
+    
+    createHome: async (home) => {
+        const res = await fetch('/api/homes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(home)
+        });
+        if (!res.ok) throw new Error('Failed to create home');
+        return res.json();
+    },
+
+    getTickets: async (homeId) => {
+        const res = await fetch(`/api/tickets?home_id=${homeId}`);
+        if (!res.ok) throw new Error('Failed to load tickets');
+        return res.json() || [];
+    },
+    
+    createTicket: async (ticket) => {
+        const res = await fetch('/api/tickets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ticket)
+        });
+        if (!res.ok) throw new Error('Failed to create ticket');
+        return res.json();
+    },
+    
+    updateTicket: async (id, updates) => {
+        const res = await fetch(`/api/tickets/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update ticket');
+        return res.json();
+    },
+
+    getInventory: async (homeId) => {
+        const res = await fetch(`/api/inventory?home_id=${homeId}`);
+        if (!res.ok) throw new Error('Failed to load inventory');
+        return res.json() || [];
+    },
+    
+    createInventory: async (item) => {
+        const res = await fetch('/api/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item)
+        });
+        if (!res.ok) throw new Error('Failed to create inventory');
+        return res.json();
+    },
+    
+    updateInventory: async (id, updates) => {
+        const res = await fetch(`/api/inventory/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update inventory');
+        return res.json();
+    }
+};
+
+        // Sample initial data (fallback)
+        const initialData = {
+            homes: [],
+            tickets: [],
+            inventory: [],
+            people: ["Self", "Spouse", "Contractor"],
+            rooms: ["Kitchen", "Living Room", "Master Bedroom", "Bathroom", "Garage", "Basement"],
+            ticketTypes: ["Repair Request", "Maintenance", "Upgrade", "Emergency", "Inspection"],
+            makes: ["GE", "Whirlpool", "Samsung", "LG"],
+            models: [],
+            types: ["Appliance", "HVAC", "Plumbing", "Electrical", "Structural"],
+            agingThresholds: {
+                high: { yellow: 7, red: 14 },
+                medium: { yellow: 14, red: 30 },
+                low: { yellow: 30, red: 60 }
             },
-            post: async (endpoint, data) => {
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    if (!response.ok) throw new Error('API Error');
-                    return response.json();
-                } catch (err) {
-                    console.error('POST error:', endpoint, err);
-                    throw err;
-                }
-            },
-            put: async (endpoint, data) => {
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    if (!response.ok) throw new Error('API Error');
-                    return response.json();
-                } catch (err) {
-                    console.error('PUT error:', endpoint, err);
-                    throw err;
-                }
-            },
-            delete: async (endpoint) => {
-                try {
-                    const response = await fetch(endpoint, { method: 'DELETE' });
-                    if (!response.ok) throw new Error('API Error');
-                    return response.json();
-                } catch (err) {
-                    console.error('DELETE error:', endpoint, err);
-                    throw err;
-                }
-            }
+            settingsPassword: "1234"
         };
 
         function App() {
+            const [currentHome, setCurrentHome] = useState(null);
+            const [view, setView] = useState('home-select');
+            const [data, setData] = useState(initialData);
             const [homes, setHomes] = useState([]);
-            const [currentHomeIdx, setCurrentHomeIdx] = useState(0);
-            const [view, setView] = useState('tickets');
             const [tickets, setTickets] = useState([]);
             const [inventory, setInventory] = useState([]);
             const [showModal, setShowModal] = useState(null);
             const [modalData, setModalData] = useState({});
-            const [loading, setLoading] = useState(false);
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [filters, setFilters] = useState({
+                status: 'all',
+                priority: 'all',
+                type: 'all',
+                room: 'all'
+            });
+            const [settingsAuthenticated, setSettingsAuthenticated] = useState(false);
+            const [selectedPerson, setSelectedPerson] = useState(null);
+            const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
 
+            // Load homes on mount
             useEffect(() => {
                 loadHomes();
             }, []);
 
+            // Load tickets & inventory when home changes
             useEffect(() => {
-                if (homes.length > 0) {
-                    if (view === 'tickets') loadTickets();
-                    if (view === 'inventory') loadInventory();
+                if (currentHome) {
+                    loadTickets();
+                    loadInventory();
                 }
-            }, [currentHomeIdx, view, homes]);
+            }, [currentHome]);
 
             const loadHomes = async () => {
                 try {
-                    const data = await api.get('/api/homes');
-                    setHomes(data || []);
+                    setLoading(true);
+                    const homesData = await dbApi.getHomes();
+                    setHomes(homesData);
+                    if (homesData.length > 0 && !currentHome) {
+                        setCurrentHome(homesData[0].id);
+                        setView('dashboard');
+                    }
                     setError('');
                 } catch (err) {
-                    setError('Failed to load homes');
+                    setError(err.message);
                     setHomes([]);
+                } finally {
+                    setLoading(false);
                 }
             };
 
             const loadTickets = async () => {
-                if (homes.length === 0) return;
-                setLoading(true);
                 try {
-                    const homeId = homes[currentHomeIdx]?.id;
-                    const data = await api.get(`/api/tickets?home_id=${homeId}`);
-                    setTickets(data || []);
-                    setError('');
+                    const ticketsData = await dbApi.getTickets(currentHome);
+                    setTickets(ticketsData);
                 } catch (err) {
-                    setError('Failed to load tickets');
-                    setTickets([]);
+                    setError(err.message);
                 }
-                setLoading(false);
             };
 
             const loadInventory = async () => {
-                setLoading(true);
                 try {
-                    const data = await api.get('/api/inventory');
-                    setInventory(data || []);
-                    setError('');
+                    const invData = await dbApi.getInventory(currentHome);
+                    setInventory(invData);
                 } catch (err) {
-                    setError('Failed to load inventory');
-                    setInventory([]);
+                    setError(err.message);
                 }
-                setLoading(false);
             };
+
+
+const addHome = async (home) => {
+    try {
+        setLoading(true);
+        setError('');
+        console.log('Sending home data:', home);
+        const response = await fetch('/api/homes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(home)
+        });
+        console.log('Response status:', response.status);
+        const responseText = await response.text();
+        console.log('Response body:', responseText);
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} - ${responseText}`);
+        }
+        
+        const newHome = JSON.parse(responseText);
+        console.log('Home created:', newHome);
+        setHomes([...homes, newHome]);
+        setCurrentHome(newHome.id);
+        setView('dashboard');
+        setShowModal(null);
+    } catch (err) {
+        console.error('Error creating home:', err);
+        setError(`Failed to create home: ${err.message}`);
+    } finally {
+        setLoading(false);
+    }
+};
+
 
             const addTicket = async (ticket) => {
                 try {
-                    const newTicket = await api.post('/api/tickets', {
+                    setLoading(true);
+                    const newTicket = await dbApi.createTicket({
                         ...ticket,
-                        home_id: homes[currentHomeIdx].id,
+                        home_id: currentHome,
                         status: 'open'
                     });
                     setTickets([...tickets, newTicket]);
                     setShowModal(null);
                     setError('');
                 } catch (err) {
-                    setError('Failed to create ticket');
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
                 }
             };
 
             const updateTicket = async (ticketId, updates) => {
                 try {
-                    await api.put(`/api/tickets/${ticketId}`, updates);
-                    setTickets(tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t));
+                    setLoading(true);
+                    await dbApi.updateTicket(ticketId, updates);
+                    await loadTickets();
                     setShowModal(null);
                     setError('');
                 } catch (err) {
-                    setError('Failed to update ticket');
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
                 }
             };
 
-            const deleteTicket = async (ticketId) => {
-                if (!window.confirm('Delete this ticket?')) return;
-                try {
-                    await api.delete(`/api/tickets/${ticketId}`);
-                    setTickets(tickets.filter(t => t.id !== ticketId));
-                    setError('');
-                } catch (err) {
-                    setError('Failed to delete ticket');
-                }
+            const addComment = (ticketId, comment) => {
+                // Placeholder - comments handled locally for now
+                const updatedTickets = tickets.map(t => {
+                    if (t.id === ticketId) {
+                        return {
+                            ...t,
+                            comments: [
+                                ...(t.comments || []),
+                                {
+                                    id: Date.now(),
+                                    text: comment.text,
+                                    author: comment.author,
+                                    timestamp: new Date().toISOString()
+                                }
+                            ]
+                        };
+                    }
+                    return t;
+                });
+                setTickets(updatedTickets);
             };
 
             const addInventoryItem = async (item) => {
                 try {
-                    const newItem = await api.post('/api/inventory', {
+                    setLoading(true);
+                    const newItem = await dbApi.createInventory({
                         ...item,
-                        home_id: homes[currentHomeIdx].id
+                        home_id: currentHome
                     });
                     setInventory([...inventory, newItem]);
                     setShowModal(null);
                     setError('');
                 } catch (err) {
-                    setError('Failed to create inventory item');
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
                 }
             };
 
             const updateInventoryItem = async (itemId, updates) => {
                 try {
-                    await api.put(`/api/inventory/${itemId}`, updates);
-                    setInventory(inventory.map(i => i.id === itemId ? { ...i, ...updates } : i));
+                    setLoading(true);
+                    await dbApi.updateInventory(itemId, updates);
+                    await loadInventory();
                     setShowModal(null);
                     setError('');
                 } catch (err) {
-                    setError('Failed to update inventory item');
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
                 }
             };
 
-            const deleteInventoryItem = async (itemId) => {
-                if (!window.confirm('Delete this item?')) return;
-                try {
-                    await api.delete(`/api/inventory/${itemId}`);
-                    setInventory(inventory.filter(i => i.id !== itemId));
-                    setError('');
-                } catch (err) {
-                    setError('Failed to delete inventory item');
+            const getTicketAge = (createdAt) => {
+                const days = Math.floor((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24));
+                return days;
+            };
+
+            const getTicketAgeColor = (ticket) => {
+                const age = getTicketAge(ticket.createdAt);
+                const thresholds = data.agingThresholds[ticket.priority] || data.agingThresholds.medium;
+                
+                if (age >= thresholds.red) return 'aged-high';
+                if (age >= thresholds.yellow) return 'aged-medium';
+                return '';
+            };
+
+            const currentHomeData = homes.find(h => h.id === currentHome);
+            const currentTickets = tickets.filter(t => t.home_id === currentHome);
+            const currentInventory = inventory.filter(i => i.home_id === currentHome);
+
+            const filteredTickets = currentTickets.filter(ticket => {
+                if (filters.status !== 'all' && ticket.status !== filters.status) return false;
+                if (filters.priority !== 'all' && ticket.priority !== filters.priority) return false;
+                if (filters.type !== 'all' && ticket.type !== filters.type) return false;
+                if (filters.room !== 'all' && ticket.room !== filters.room) return false;
+                return true;
+            });
+
+            const stats = {
+                open: currentTickets.filter(t => t.status === 'open').length,
+                inProgress: currentTickets.filter(t => t.status === 'in-progress').length,
+                high: currentTickets.filter(t => t.priority === 'high' && t.status !== 'closed').length,
+                totalInventory: currentInventory.length
+            };
+
+            const handleSettingsClick = () => {
+                if (settingsAuthenticated) {
+                    setView('settings');
+                } else {
+                    setShowModal('settings-password');
                 }
             };
 
-            if (homes.length === 0) {
+            if (loading && view === 'home-select') {
                 return (
                     <div className="app">
                         <header className="header">
                             <div className="header-content">
-                                <h1>Home Maintenance Tracker</h1>
+                                <h1>Home Maintenance</h1>
                             </div>
                         </header>
                         <div className="content">
-                            {error && <div className="error">{error}</div>}
-                            <h2>Loading homes...</h2>
-                            <p>Make sure you have homes in your database.</p>
+                            <div className="loading">Loading homes...</div>
                         </div>
                     </div>
                 );
             }
 
-            const currentHome = homes[currentHomeIdx];
-
+if (view === 'home-select') {
+    return (
+        <>
+            <HomeSelector homes={homes} onSelectHome={(homeId) => {
+                setCurrentHome(homeId);
+                setView('dashboard');
+            }} onAddHome={() => {
+                console.log('Add home clicked');
+                setShowModal('add-home');
+            }} />
+            {showModal === 'add-home' && (
+                <AddHomeModal
+                    onClose={() => setShowModal(null)}
+                    onSave={addHome}
+                />
+            )}
+        </>
+    );
+}
             return (
                 <div className="app">
                     <header className="header">
                         <div className="header-content">
-                            <h1>Home Maintenance Tracker</h1>
+                            <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                                ☰
+                            </button>
+                            <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
+                            <button className="btn btn-secondary" onClick={() => {
+                                setCurrentHome(null);
+                                setView('home-select');
+                            }}>
+                                Change Home
+                            </button>
                         </div>
                     </header>
 
                     <div className="main-layout">
-                        <aside className="sidebar">
-                            <div className="home-selector">
-                                <button onClick={() => setCurrentHomeIdx((i) => (i > 0 ? i - 1 : homes.length - 1))}>
-                                    ▲
-                                </button>
-                                <div className="current">
-                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Home</div>
-                                    <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{currentHome.name}</div>
-                                </div>
-                                <button onClick={() => setCurrentHomeIdx((i) => (i < homes.length - 1 ? i + 1 : 0))}>
-                                    ▼
-                                </button>
-                            </div>
-
+                        <aside className={`sidebar ${!sidebarOpen ? 'mobile-hidden' : ''}`}>
                             <nav>
+                                <div className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}
+                                     onClick={() => {
+                                        setView('dashboard');
+                                        setSidebarOpen(false);
+                                     }}>
+                                    📊 Dashboard
+                                </div>
                                 <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`}
-                                     onClick={() => setView('tickets')}>
+                                     onClick={() => {
+                                        setView('tickets');
+                                        setSidebarOpen(false);
+                                     }}>
                                     🎫 Tickets
                                 </div>
                                 <div className={`nav-item ${view === 'inventory' ? 'active' : ''}`}
-                                     onClick={() => setView('inventory')}>
+                                     onClick={() => {
+                                        setView('inventory');
+                                        setSidebarOpen(false);
+                                     }}>
                                     📦 Inventory
+                                </div>
+                                <div className={`nav-item ${view === 'rooms' ? 'active' : ''}`}
+                                     onClick={() => {
+                                        setView('rooms');
+                                        setSidebarOpen(false);
+                                     }}>
+                                    🏠 Rooms
+                                </div>
+                                <div className={`nav-item ${view === 'people' ? 'active' : ''}`}
+                                     onClick={() => {
+                                        setView('people');
+                                        setSelectedPerson(null);
+                                        setSidebarOpen(false);
+                                     }}>
+                                    👤 People
+                                </div>
+                                <div className={`nav-item ${view === 'settings' ? 'active' : ''}`}
+                                     onClick={handleSettingsClick}>
+                                    ⚙️ Settings
                                 </div>
                             </nav>
                         </aside>
 
                         <main className="content">
-                            {error && <div className="error">{error}</div>}
+                            {error && <div className="error-message">{error}</div>}
+                            {loading && view !== 'home-select' && <div className="loading">Loading...</div>}
 
-                            {view === 'tickets' && (
-                                <>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                        <h2>Tickets</h2>
-                                        <button className="btn btn-primary" onClick={() => setShowModal('add-ticket')}>
-                                            + New Ticket
-                                        </button>
-                                    </div>
-
-                                    {loading ? (
-                                        <div className="loading">Loading tickets...</div>
-                                    ) : (
-                                        <div className="ticket-list">
-                                            {tickets.length > 0 ? (
-                                                tickets.map(ticket => (
-                                                    <div key={ticket.id} className={`ticket-card priority-${ticket.priority}`}>
-                                                        <div className="card-title">{ticket.title}</div>
-                                                        <div className="card-description">{ticket.description}</div>
-                                                        <div>
-                                                            <span className="badge badge-status">{ticket.status}</span>
-                                                            <span className="badge">{ticket.priority}</span>
-                                                            {ticket.room && <span className="badge">{ticket.room}</span>}
-                                                        </div>
-                                                        <div className="card-actions">
-                                                            <button
-                                                                className="btn btn-secondary"
-                                                                onClick={() => {
-                                                                    setModalData(ticket);
-                                                                    setShowModal('edit-ticket');
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-danger"
-                                                                onClick={() => deleteTicket(ticket.id)}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                                    No tickets yet
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
+                            {view === 'dashboard' && !loading && (
+                                <DashboardView 
+                                    stats={stats} 
+                                    tickets={currentTickets}
+                                    home={currentHomeData}
+                                    onNewTicket={() => setShowModal('add-ticket')}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    onNavigateRoom={(room) => {
+                                        setView('rooms');
+                                    }}
+                                    onNavigatePerson={(person) => {
+                                        setSelectedPerson(person);
+                                        setView('people');
+                                    }}
+                                    onNavigateInventory={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
                             )}
 
-                            {view === 'inventory' && (
-                                <>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                        <h2>Inventory</h2>
-                                        <button className="btn btn-primary" onClick={() => setShowModal('add-inventory')}>
-                                            + New Item
-                                        </button>
-                                    </div>
+                            {view === 'tickets' && !loading && (
+                                <TicketsView
+                                    tickets={filteredTickets}
+                                    filters={filters}
+                                    onFilterChange={setFilters}
+                                    data={data}
+                                    onNewTicket={() => setShowModal('add-ticket')}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    getTicketAgeColor={getTicketAgeColor}
+                                    onNavigateRoom={(room) => {
+                                        setView('rooms');
+                                    }}
+                                    onNavigatePerson={(person) => {
+                                        setSelectedPerson(person);
+                                        setView('people');
+                                    }}
+                                    onNavigateInventory={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
 
-                                    {loading ? (
-                                        <div className="loading">Loading inventory...</div>
-                                    ) : (
-                                        <div className="inventory-list">
-                                            {inventory.length > 0 ? (
-                                                inventory.map(item => (
-                                                    <div key={item.id} className="inventory-card">
-                                                        <div className="card-title">{item.name}</div>
-                                                        <div className="card-description">{item.description}</div>
-                                                        <div>
-                                                            {item.location && <span className="badge">{item.location}</span>}
-                                                            {item.type && <span className="badge">{item.type}</span>}
-                                                        </div>
-                                                        <div className="card-actions">
-                                                            <button
-                                                                className="btn btn-secondary"
-                                                                onClick={() => {
-                                                                    setModalData(item);
-                                                                    setShowModal('edit-inventory');
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-danger"
-                                                                onClick={() => deleteInventoryItem(item.id)}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                                    No inventory items yet
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
+                            {view === 'inventory' && !loading && (
+                                <InventoryView
+                                    inventory={currentInventory}
+                                    onNewItem={() => setShowModal('add-inventory')}
+                                    onItemClick={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'rooms' && !loading && (
+                                <RoomsView
+                                    rooms={data.rooms}
+                                    tickets={currentTickets}
+                                    inventory={currentInventory}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    onItemClick={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'people' && !loading && (
+                                <PeopleView
+                                    people={data.people}
+                                    tickets={currentTickets}
+                                    selectedPerson={selectedPerson}
+                                    onSelectPerson={setSelectedPerson}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'settings' && settingsAuthenticated && !loading && (
+                                <SettingsView
+                                    data={data}
+                                    setData={setData}
+                                    currentHome={currentHomeData}
+                                    onUpdateHome={(updates) => {
+                                        setData(prev => ({
+                                            ...prev,
+                                            homes: prev.homes?.map(h =>
+                                                h.id === currentHome ? { ...h, ...updates } : h
+                                            )
+                                        }));
+                                    }}
+                                    onLogout={() => {
+                                        setSettingsAuthenticated(false);
+                                        setView('dashboard');
+                                    }}
+                                />
                             )}
                         </main>
                     </div>
 
                     {/* Modals */}
+                    {showModal === 'settings-password' && (
+                        <SettingsPasswordModal
+                            onClose={() => setShowModal(null)}
+                            onAuthenticate={() => {
+                                setSettingsAuthenticated(true);
+                                setShowModal(null);
+                                setView('settings');
+                            }}
+                            correctPassword={data.settingsPassword}
+                        />
+                    )}
+
+                    {showModal === 'add-home' && (
+                        <AddHomeModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addHome}
+                        />
+                    )}
+
                     {showModal === 'add-ticket' && (
-                        <AddTicketModal onClose={() => setShowModal(null)} onSave={addTicket} />
+                        <AddTicketModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addTicket}
+                            data={data}
+                            inventory={currentInventory}
+                        />
                     )}
-                    {showModal === 'edit-ticket' && (
-                        <EditTicketModal ticket={modalData} onClose={() => setShowModal(null)} onSave={(u) => updateTicket(modalData.id, u)} />
+
+                    {showModal === 'view-ticket' && (
+                        <ViewTicketModal
+                            ticket={modalData}
+                            onClose={() => setShowModal(null)}
+                            onUpdate={updateTicket}
+                            onAddComment={addComment}
+                            data={data}
+                            inventory={currentInventory}
+                            onViewInventory={(item) => {
+                                setModalData(item);
+                                setShowModal('view-inventory');
+                            }}
+                            allTickets={currentTickets}
+                        />
                     )}
+
                     {showModal === 'add-inventory' && (
-                        <AddInventoryModal onClose={() => setShowModal(null)} onSave={addInventoryItem} />
+                        <AddInventoryModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addInventoryItem}
+                            data={data}
+                        />
                     )}
-                    {showModal === 'edit-inventory' && (
-                        <EditInventoryModal item={modalData} onClose={() => setShowModal(null)} onSave={(u) => updateInventoryItem(modalData.id, u)} />
+
+                    {showModal === 'view-inventory' && (
+                        <ViewInventoryModal
+                            item={modalData}
+                            onClose={() => setShowModal(null)}
+                            onUpdate={updateInventoryItem}
+                            tickets={currentTickets}
+                            onViewTicket={(ticket) => {
+                                setModalData(ticket);
+                                setShowModal('view-ticket');
+                            }}
+                        />
                     )}
                 </div>
             );
         }
 
-        function AddTicketModal({ onClose, onSave }) {
-            const [form, setForm] = useState({
+        // [ALL YOUR ORIGINAL COMPONENTS BELOW - Unchanged except for data source]
+        // HomeSelector, DashboardView, TicketsView, TicketCard, InventoryView, RoomsView, 
+        // PeopleView, SettingsView, and all Modal components...
+
+
+function HomeSelector({ homes, onSelectHome, onAddHome }) {
+    return (
+        <div className="app">
+            <header className="header">
+                <div className="header-content">
+                    <h1>Home Maintenance Tracker</h1>
+                </div>
+            </header>
+            <div className="content">
+                <h2 style={{ marginBottom: '2rem' }}>Select a Home</h2>
+                <div className="home-selector">
+                    {homes.map(home => (
+                        <div key={home.id} className="home-card" onClick={() => onSelectHome(home.id)}>
+                            <div className="home-image" style={home.photo ? {
+                                backgroundImage: `url(${home.photo})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
+                            } : {}}>
+                                {!home.photo && <div style={{ 
+                                    height: '100%', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    fontSize: '4rem'
+                                }}>🏠</div>}
+                            </div>
+                            <div className="home-info">
+                                <h3>{home.name}</h3>
+                                <p>{home.address}</p>
+                            </div>
+                        </div>
+                    ))}
+                    <div className="home-card add-home-card" onClick={onAddHome} style={{ cursor: 'pointer' }}>
+                        +
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+
+
+        // PASTE ALL YOUR ORIGINAL COMPONENT FUNCTIONS HERE (DashboardView, TicketsView, etc.)
+        // They remain 100% unchanged from your v1.2 version...
+
+        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            const recentTickets = tickets.slice(-5).reverse();
+
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+                        <h2>Dashboard</h2>
+                        <button className="btn btn-primary" onClick={onNewTicket}>
+                            + New Ticket
+                        </button>
+                    </div>
+
+                    {home?.photo && (
+                        <div style={{ 
+                            marginBottom: '2rem', 
+                            borderRadius: '12px', 
+                            overflow: 'hidden',
+                            position: 'relative',
+                            height: '300px'
+                        }}>
+                            <img 
+                                src={home.photo} 
+                                alt={home.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                                color: 'white',
+                                padding: '2rem',
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold'
+                            }}>
+                                {home.address}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="dashboard">
+                        <div className="stat-card">
+                            <h3>{stats.open}</h3>
+                            <p>Open Tickets</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{stats.inProgress}</h3>
+                            <p>In Progress</p>
+                        </div>
+                        <div className="stat-card high">
+                            <h3>{stats.high}</h3>
+                            <p>High Priority</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{stats.totalInventory}</h3>
+                            <p>Inventory Items</p>
+                        </div>
+                    </div>
+
+                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Recent Tickets</h3>
+                    <div className="ticket-list">
+                        {recentTickets.map(ticket => (
+                            <TicketCard 
+                                key={ticket.id} 
+                                ticket={ticket} 
+                                onClick={() => onTicketClick(ticket)}
+                                onNavigateRoom={onNavigateRoom}
+                                onNavigatePerson={onNavigatePerson}
+                                onNavigateInventory={onNavigateInventory}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // [PASTE YOUR TicketsView, TicketCard, InventoryView, RoomsView, PeopleView, SettingsView HERE]
+        // Copy all remaining functions from your v1.2 HTML as-is...
+
+        function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+                        <h2>Tickets</h2>
+                        <button className="btn btn-primary" onClick={onNewTicket}>
+                            + New Ticket
+                        </button>
+                    </div>
+
+                    <div className="filters">
+                        <div className="filter-group">
+                            <label>Status</label>
+                            <select value={filters.status} onChange={(e) => onFilterChange({...filters, status: e.target.value})}>
+                                <option value="all">All</option>
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="waiting">Waiting</option>
+                                <option value="blocking">Blocking</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Priority</label>
+                            <select value={filters.priority} onChange={(e) => onFilterChange({...filters, priority: e.target.value})}>
+                                <option value="all">All</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Type</label>
+                            <select value={filters.type} onChange={(e) => onFilterChange({...filters, type: e.target.value})}>
+                                <option value="all">All Types</option>
+                                {data.ticketTypes.map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Room</label>
+                            <select value={filters.room} onChange={(e) => onFilterChange({...filters, room: e.target.value})}>
+                                <option value="all">All Rooms</option>
+                                {data.rooms.map(room => (
+                                    <option key={room} value={room}>{room}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="ticket-list">
+                        {tickets.map(ticket => (
+                            <TicketCard 
+                                key={ticket.id} 
+                                ticket={ticket} 
+                                onClick={() => onTicketClick(ticket)}
+                                className={getTicketAgeColor(ticket)}
+                                onNavigateRoom={onNavigateRoom}
+                                onNavigatePerson={onNavigatePerson}
+                                onNavigateInventory={onNavigateInventory}
+                            />
+                        ))}
+                        {tickets.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                                No tickets found. Create your first ticket!
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            return (
+                <div className={`ticket-card priority-${ticket.priority} ${className}`}>
+                    <div className="ticket-header">
+                        <div style={{ flex: 1 }}>
+                            <div className="ticket-title">{ticket.title}</div>
+                            <div className="ticket-meta">
+                                <span>#{ticket.id}</span>
+                                <span>📍 <span className="clickable-field" onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNavigateRoom && onNavigateRoom(ticket.room);
+                                }}>{ticket.room}</span></span>
+                                <span>👤 <span className="clickable-field" onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNavigatePerson && onNavigatePerson(ticket.requester);
+                                }}>{ticket.requester}</span></span>
+                                {ticket.inventoryItem && <span>📦 {ticket.inventoryItem}</span>}
+                            </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <span className="badge badge-status">{ticket.status}</span>
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                        {ticket.description?.substring(0, 100)}{ticket.description?.length > 100 ? '...' : ''}
+                    </div>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
+                        <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
+                            {ticket.type}
+                        </span>
+                        <span className="badge badge-priority">
+                            {ticket.priority} priority
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 'auto' }}>
+                            {new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                    </div>
+                    <div onClick={onClick} style={{ cursor: 'pointer', marginTop: '0.5rem', padding: '0.5rem', borderRadius: '4px' }}>
+                        <span style={{ color: '#667eea', fontSize: '0.85rem' }}>Click to view details →</span>
+                    </div>
+                </div>
+            );
+        }
+
+        function InventoryView({ inventory, onNewItem, onItemClick }) {
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+                        <h2>Inventory</h2>
+                        <button className="btn btn-primary" onClick={onNewItem}>
+                            + Add Item
+                        </button>
+                    </div>
+
+                    <div className="inventory-grid">
+                        {inventory.map(item => (
+                            <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
+                                <div className="inventory-header">{item.name}</div>
+                                <div className="inventory-icons">
+                                    {(item.manuals && item.manuals.length > 0) && (
+                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                            <span>📄</span>
+                                            <span className="inventory-icon-count">{item.manuals.length}</span>
+                                        </div>
+                                    )}
+                                    {(item.receipts && item.receipts.length > 0) && (
+                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                            <span>🧾</span>
+                                            <span className="inventory-icon-count">{item.receipts.length}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="inventory-details">
+                                    <div><strong>Type:</strong> {item.type}</div>
+                                    <div><strong>Make:</strong> {item.make}</div>
+                                    <div><strong>Model:</strong> {item.model}</div>
+                                    <div><strong>Room:</strong> {item.room}</div>
+                                    {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
+                                    {item.purchase_date && (
+                                        <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {inventory.length === 0 && (
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
+                                No inventory items yet. Add your first item!
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function RoomsView({ rooms, tickets, inventory, onTicketClick, onItemClick }) {
+            const [expandedRoom, setExpandedRoom] = useState(null);
+
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '1.5rem' }}>Rooms</h2>
+                    {rooms.map(room => {
+                        const roomTickets = tickets.filter(t => t.room === room);
+                        const roomInventory = inventory.filter(i => i.room === room);
+                        const openTickets = roomTickets.filter(t => t.status !== 'closed');
+
+                        return (
+                            <div key={room} className="room-section">
+                                <div className="room-header" onClick={() => setExpandedRoom(expandedRoom === room ? null : room)}>
+                                    <h3>{room}</h3>
+                                    <div className="room-stats">
+                                        <span>{openTickets.length} open</span>
+                                        <span>{roomInventory.length} items</span>
+                                        <span>{expandedRoom === room ? '▲' : '▼'}</span>
+                                    </div>
+                                </div>
+                                {expandedRoom === room && (
+                                    <div>
+                                        <h4 style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>Tickets</h4>
+                                        {roomTickets.length > 0 ? (
+                                            <div className="ticket-list">
+                                                {roomTickets.map(ticket => (
+                                                    <TicketCard key={ticket.id} ticket={ticket} onClick={() => onTicketClick(ticket)} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets for this room</p>
+                                        )}
+                                        
+                                        <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>Inventory</h4>
+                                        {roomInventory.length > 0 ? (
+                                            <div className="inventory-grid">
+                                                {roomInventory.map(item => (
+                                                    <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
+                                                        <div className="inventory-header">{item.name}</div>
+                                                        <div className="inventory-details">
+                                                            <div><strong>Type:</strong> {item.type}</div>
+                                                            <div><strong>Make:</strong> {item.make}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No inventory items</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        function PeopleView({ people, tickets, selectedPerson, onSelectPerson, onTicketClick }) {
+            if (selectedPerson) {
+                const personTickets = tickets.filter(t => t.requester === selectedPerson);
+                const openTickets = personTickets.filter(t => t.status !== 'closed');
+
+                return (
+                    <div>
+                        <button className="btn btn-secondary" onClick={() => onSelectPerson(null)} style={{ marginBottom: '1.5rem' }}>
+                            ��� Back to People
+                        </button>
+                        <div className="person-section">
+                            <div className="person-header">{selectedPerson}</div>
+                            <div className="person-stats">
+                                <span>👤</span>
+                                <span>{openTickets.length} open</span>
+                                <span>{personTickets.length - openTickets.length} closed</span>
+                            </div>
+                            <div style={{ marginTop: '1rem' }}>
+                                <h3 style={{ marginBottom: '1rem' }}>Tickets</h3>
+                                {personTickets.length > 0 ? (
+                                    <div className="ticket-list">
+                                        {personTickets.map(ticket => (
+                                            <TicketCard 
+                                                key={ticket.id} 
+                                                ticket={ticket} 
+                                                onClick={() => onTicketClick(ticket)}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '1.5rem' }}>People</h2>
+                    {people.map(person => {
+                        const personTickets = tickets.filter(t => t.requester === person);
+                        const openTickets = personTickets.filter(t => t.status !== 'closed');
+
+                        return (
+                            <div key={person} className="person-section" onClick={() => onSelectPerson(person)} style={{ cursor: 'pointer' }}>
+                                <div className="person-header">{person}</div>
+                                <div className="person-stats">
+                                    <span>👤</span>
+                                    <span>{openTickets.length} open</span>
+                                    <span>{personTickets.length - openTickets.length} closed</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
+            const [newPerson, setNewPerson] = useState('');
+            const [newRoom, setNewRoom] = useState('');
+            const [newType, setNewType] = useState('');
+            const [newTicketType, setNewTicketType] = useState('');
+            const [newMake, setNewMake] = useState('');
+            const [newModel, setNewModel] = useState('');
+            const [newPassword, setNewPassword] = useState('');
+
+            const addItem = (field, value, setter) => {
+                if (value.trim()) {
+                    setData(prev => ({
+                        ...prev,
+                        [field]: [...prev[field], value.trim()]
+                    }));
+                    setter('');
+                }
+            };
+
+            const removeItem = (field, value) => {
+                setData(prev => ({
+                    ...prev,
+                    [field]: prev[field].filter(item => item !== value)
+                }));
+            };
+
+            const updateThreshold = (priority, level, value) => {
+                setData(prev => ({
+                    ...prev,
+                    agingThresholds: {
+                        ...prev.agingThresholds,
+                        [priority]: {
+                            ...prev.agingThresholds[priority],
+                            [level]: parseInt(value)
+                        }
+                    }
+                }));
+            };
+
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        onUpdateHome({ photo: e.target.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const updatePassword = () => {
+                if (newPassword.trim()) {
+                    setData(prev => ({
+                        ...prev,
+                        settingsPassword: newPassword.trim()
+                    }));
+                    setNewPassword('');
+                    alert('Password updated!');
+                }
+            };
+
+            const exportData = () => {
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `home-maintenance-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            setData(imported);
+                            alert('Data imported successfully!');
+                        } catch (err) {
+                            alert('Error importing data. Please check the file format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+                        <h2>Settings</h2>
+                        <button className="btn btn-secondary" onClick={onLogout}>
+                            Logout
+                        </button>
+                    </div>
+
+                    <div className="room-section">
+                        <h3 style={{ marginBottom: '1rem' }}>Security</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="New password..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '200px' }}
+                            />
+                            <button className="btn btn-primary" onClick={updatePassword}>
+                                Update Password
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="room-section">
+                        <h3 style={{ marginBottom: '1rem' }}>Home Photo</h3>
+                        {currentHome?.photo && (
+                            <img src={currentHome.photo} alt="Home" className="photo-preview" />
+                        )}
+                        <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ marginTop: '1rem' }} />
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>People</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                value={newPerson}
+                                onChange={(e) => setNewPerson(e.target.value)}
+                                placeholder="Add person..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('people', newPerson, setNewPerson)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.people.map(person => (
+                                <span key={person} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('people', person)}>
+                                    {person} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Rooms</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                value={newRoom}
+                                onChange={(e) => setNewRoom(e.target.value)}
+                                placeholder="Add room..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('rooms', newRoom, setNewRoom)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.rooms.map(room => (
+                                <span key={room} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('rooms', room)}>
+                                    {room} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Ticket Types</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                value={newTicketType}
+                                onChange={(e) => setNewTicketType(e.target.value)}
+                                placeholder="Add type..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('ticketTypes', newTicketType, setNewTicketType)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.ticketTypes.map(type => (
+                                <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('ticketTypes', type)}>
+                                    {type} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Makes</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                value={newMake}
+                                onChange={(e) => setNewMake(e.target.value)}
+                                placeholder="Add make..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('makes', newMake, setNewMake)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.makes.map(make => (
+                                <span key={make} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('makes', make)}>
+                                    {make} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Data Management</h3>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                            <button className="btn btn-primary" onClick={exportData}>
+                                Export Data
+                            </button>
+                            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                Import Data
+                                <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }} />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Modal Components
+        function SettingsPasswordModal({ onClose, onAuthenticate, correctPassword }) {
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = () => {
+                if (password === correctPassword) {
+                    onAuthenticate();
+                    setPassword('');
+                } else {
+                    setError('Incorrect password');
+                    setPassword('');
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Settings Password</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Enter Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        setError('');
+                                    }}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                                    placeholder="Enter settings password"
+                                />
+                                {error && <div style={{ color: '#ef4444', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</div>}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleSubmit}>
+                                Unlock Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+function AddHomeModal({ onClose, onSave }) {
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        address: '', 
+        photo: null,
+        user_name: '',
+        user_email: '',
+        settings_password: ''
+    });
+    const [showUserSetup, setShowUserSetup] = useState(false);
+
+    const handlePhotoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setFormData(prev => ({ ...prev, photo: e.target.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = () => {
+        // If user info is empty, we need to ask for it
+        if (!formData.user_name || !formData.user_email) {
+            setShowUserSetup(true);
+            return;
+        }
+        
+        if (formData.name && formData.address) {
+            onSave(formData);
+        }
+    };
+
+    if (showUserSetup) {
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h2>First Time Setup</h2>
+                        <button className="close-btn" onClick={onClose}>×</button>
+                    </div>
+                    <div className="modal-body">
+                        <p style={{ marginBottom: '1.5rem', color: '#666' }}>
+                            Welcome! Let's set up your account and home.
+                        </p>
+                        
+                        <div className="form-group">
+                            <label>Your Name *</label>
+                            <input
+                                type="text"
+                                value={formData.user_name}
+                                onChange={(e) => setFormData({...formData, user_name: e.target.value})}
+                                placeholder="John Doe"
+                            />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Your Email *</label>
+                            <input
+                                type="email"
+                                value={formData.user_email}
+                                onChange={(e) => setFormData({...formData, user_email: e.target.value})}
+                                placeholder="john@example.com"
+                            />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Settings Password *</label>
+                            <input
+                                type="password"
+                                value={formData.settings_password}
+                                onChange={(e) => setFormData({...formData, settings_password: e.target.value})}
+                                placeholder="Create a password to protect your settings"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Home Name *</label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                placeholder="e.g., Main Residence"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Address *</label>
+                            <input
+                                type="text"
+                                value={formData.address}
+                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                placeholder="123 Main St, City, State"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Photo</label>
+                            <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                            {formData.photo && (
+                                <img src={formData.photo} alt="Preview" className="photo-preview" />
+                            )}
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                if (formData.user_name && formData.user_email && formData.settings_password && formData.name && formData.address) {
+                                    onSave(formData);
+                                }
+                            }}
+                            disabled={!formData.user_name || !formData.user_email || !formData.settings_password || !formData.name || !formData.address}
+                        >
+                            Create Account & Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Add New Home</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    <div className="form-group">
+                        <label>Home Name *</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            placeholder="e.g., Main Residence"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Address *</label>
+                        <input
+                            type="text"
+                            value={formData.address}
+                            onChange={(e) => setFormData({...formData, address: e.target.value})}
+                            placeholder="123 Main St, City, State"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Photo</label>
+                        <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                        {formData.photo && (
+                            <img src={formData.photo} alt="Preview" className="photo-preview" />
+                        )}
+                    </div>
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSave}
+                        disabled={!formData.name || !formData.address}
+                    >
+                        Add Home
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+        function AddTicketModal({ onClose, onSave, data, inventory }) {
+            const [formData, setFormData] = useState({
                 title: '',
                 description: '',
-                type: 'Repair Request',
+                type: data.ticketTypes[0] || 'Repair Request',
                 priority: 'medium',
-                requester: 'Self',
-                room: ''
+                requester: data.people[0] || 'Self',
+                room: data.rooms[0] || 'Kitchen',
+                inventory_item_id: '',
+                estimated_cost: ''
             });
 
             return (
@@ -791,24 +2297,32 @@
                         <div className="modal-body">
                             <div className="form-group">
                                 <label>Title *</label>
-                                <input type="text" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} />
+                                <input
+                                    type="text"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                    placeholder="Brief description"
+                                />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} />
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Type</label>
-                                    <select value={form.type} onChange={(e) => setForm({...form, type: e.target.value})}>
-                                        <option>Repair Request</option>
-                                        <option>Maintenance</option>
-                                        <option>Upgrade</option>
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {data.ticketTypes.map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Priority</label>
-                                    <select value={form.priority} onChange={(e) => setForm({...form, priority: e.target.value})}>
+                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
@@ -817,185 +2331,361 @@
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Room</label>
-                                    <input type="text" value={form.room} onChange={(e) => setForm({...form, room: e.target.value})} />
+                                    <label>Requester</label>
+                                    <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
+                                        {data.people.map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Requester</label>
-                                    <input type="text" value={form.requester} onChange={(e) => setForm({...form, requester: e.target.value})} />
+                                    <label>Room</label>
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {data.rooms.map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button className="btn btn-primary" onClick={() => form.title && onSave(form)}>Create</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => formData.title && onSave(formData)}
+                                disabled={!formData.title}
+                            >
+                                Create
+                            </button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        function EditTicketModal({ ticket, onClose, onSave }) {
-            const [form, setForm] = useState(ticket);
+        function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets }) {
+            const [editing, setEditing] = useState(false);
+            const [formData, setFormData] = useState(ticket);
+            const [newComment, setNewComment] = useState('');
+            const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
+
+            const handleSave = () => {
+                onUpdate(ticket.id, formData);
+                setEditing(false);
+            };
+
+            const handleAddComment = () => {
+                if (newComment.trim()) {
+                    onAddComment(ticket.id, {
+                        text: newComment,
+                        author: commentAuthor
+                    });
+                    setNewComment('');
+                }
+            };
 
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>Edit Ticket #{ticket.id}</h2>
+                            <h2>Ticket #{ticket.id}</h2>
                             <button className="close-btn" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
-                            <div className="form-group">
-                                <label>Title</label>
-                                <input type="text" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea value={form.description || ''} onChange={(e) => setForm({...form, description: e.target.value})} />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Room</label>
-                                    <input type="text" value={form.room || ''} onChange={(e) => setForm({...form, room: e.target.value})} />
+                            {!editing ? (
+                                <div>
+                                    <h3>{ticket.title}</h3>
+                                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                                        <span className="badge badge-status" style={{ marginRight: '0.5rem' }}>{ticket.status}</span>
+                                        <span className="badge badge-priority">{ticket.priority}</span>
+                                    </div>
+                                    <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
+                                        <div><strong>Type:</strong> {ticket.type}</div>
+                                        <div><strong>Requester:</strong> {ticket.requester}</div>
+                                        <div><strong>Room:</strong> {ticket.room}</div>
+                                        {ticket.estimated_cost && <div><strong>Cost:</strong> {ticket.estimated_cost}</div>}
+                                        <div><strong>Created:</strong> {new Date(ticket.created_at).toLocaleString()}</div>
+                                    </div>
+
+                                    <div style={{ marginTop: '1.5rem' }}>
+                                        <strong>Description:</strong>
+                                        <p style={{ marginTop: '0.5rem', color: '#666' }}>{ticket.description || 'N/A'}</p>
+                                    </div>
+
+                                    <div className="comments-section">
+                                        <h3 style={{ marginBottom: '1rem' }}>Comments</h3>
+                                        {ticket.comments && ticket.comments.map(comment => (
+                                            <div key={comment.id} className={`comment ${comment.isSystem ? 'system-comment' : ''}`}>
+                                                <div className="comment-header">
+                                                    <strong>{comment.author}</strong>
+                                                    <span>{new Date(comment.timestamp).toLocaleString()}</span>
+                                                </div>
+                                                <div className="comment-body">{comment.text}</div>
+                                            </div>
+                                        ))}
+                                        <div style={{ marginTop: '1.5rem' }}>
+                                            <div className="form-group">
+                                                <label>Your Name</label>
+                                                <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
+                                                    {data.people.map(p => (
+                                                        <option key={p} value={p}>{p}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <textarea
+                                                    value={newComment}
+                                                    onChange={(e) => setNewComment(e.target.value)}
+                                                    placeholder="Add a comment..."
+                                                />
+                                            </div>
+                                            <button className="btn btn-primary" onClick={handleAddComment}>
+                                                Add Comment
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label>Status</label>
-                                    <select value={form.status || 'open'} onChange={(e) => setForm({...form, status: e.target.value})}>
-                                        <option value="open">Open</option>
-                                        <option value="in-progress">In Progress</option>
-                                        <option value="waiting">Waiting</option>
-                                        <option value="closed">Closed</option>
-                                    </select>
+                            ) : (
+                                <div>
+                                    <div className="form-group">
+                                        <label>Title</label>
+                                        <input
+                                            type="text"
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Description</label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Status</label>
+                                            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                                                <option value="open">Open</option>
+                                                <option value="in-progress">In Progress</option>
+                                                <option value="waiting">Waiting</option>
+                                                <option value="closed">Closed</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Priority</label>
+                                            <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                                <option value="low">Low</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="high">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Priority</label>
-                                    <select value={form.priority || 'medium'} onChange={(e) => setForm({...form, priority: e.target.value})}>
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Type</label>
-                                    <select value={form.type || 'Repair Request'} onChange={(e) => setForm({...form, type: e.target.value})}>
-                                        <option>Repair Request</option>
-                                        <option>Maintenance</option>
-                                        <option>Upgrade</option>
-                                    </select>
-                                </div>
-                            </div>
+                            )}
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button className="btn btn-primary" onClick={() => onSave(form)}>Save</button>
+                            {!editing ? (
+                                <>
+                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                        Edit
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setFormData(ticket);
+                                        setEditing(false);
+                                    }}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSave}>
+                                        Save
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
             );
         }
 
-        function AddInventoryModal({ onClose, onSave }) {
-            const [form, setForm] = useState({
+        function AddInventoryModal({ onClose, onSave, data }) {
+            const [formData, setFormData] = useState({
                 name: '',
-                type: '',
-                make: '',
+                type: data.types[0] || 'Appliance',
+                make: data.makes[0] || 'GE',
                 model: '',
-                room: '',
-                description: ''
+                room: data.rooms[0] || 'Kitchen'
             });
 
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>New Inventory Item</h2>
+                            <h2>Add Inventory</h2>
                             <button className="close-btn" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
                             <div className="form-group">
                                 <label>Name *</label>
-                                <input type="text" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} />
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="e.g., Kitchen Refrigerator"
+                                />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Type</label>
-                                    <input type="text" value={form.type} onChange={(e) => setForm({...form, type: e.target.value})} />
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {data.types.map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Room</label>
-                                    <input type="text" value={form.room} onChange={(e) => setForm({...form, room: e.target.value})} />
+                                    <label>Make</label>
+                                    <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
+                                        {data.makes.map(m => (
+                                            <option key={m} value={m}>{m}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Make</label>
-                                    <input type="text" value={form.make} onChange={(e) => setForm({...form, make: e.target.value})} />
+                                    <label>Model</label>
+                                    <input
+                                        type="text"
+                                        value={formData.model}
+                                        onChange={(e) => setFormData({...formData, model: e.target.value})}
+                                    />
                                 </div>
                                 <div className="form-group">
-                                    <label>Model</label>
-                                    <input type="text" value={form.model} onChange={(e) => setForm({...form, model: e.target.value})} />
+                                    <label>Room</label>
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {data.rooms.map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button className="btn btn-primary" onClick={() => form.name && onSave(form)}>Create</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => formData.name && onSave(formData)}
+                                disabled={!formData.name}
+                            >
+                                Create
+                            </button>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        function EditInventoryModal({ item, onClose, onSave }) {
-            const [form, setForm] = useState(item);
+        function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) {
+            const [editing, setEditing] = useState(false);
+            const [formData, setFormData] = useState(item);
+
+            const relatedTickets = tickets.filter(t => parseInt(t.inventoryItemId) === item.id);
+
+            const handleSave = () => {
+                onUpdate(item.id, formData);
+                setEditing(false);
+            };
 
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>Edit Item #{item.id}</h2>
+                            <h2>{item.name}</h2>
                             <button className="close-btn" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
-                            <div className="form-group">
-                                <label>Name</label>
-                                <input type="text" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea value={form.description || ''} onChange={(e) => setForm({...form, description: e.target.value})} />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Type</label>
-                                    <input type="text" value={form.type || ''} onChange={(e) => setForm({...form, type: e.target.value})} />
+                            {!editing ? (
+                                <div>
+                                    <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+                                        <div><strong>Type:</strong> {item.type}</div>
+                                        <div><strong>Make:</strong> {item.make}</div>
+                                        <div><strong>Model:</strong> {item.model || 'N/A'}</div>
+                                        <div><strong>Room:</strong> {item.room}</div>
+
+{item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
+{item.purchase_date && (
+    <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
+)}
+
+                                        {item.warranty_expires && <div><strong>Warranty:</strong> {new Date(item.warranty_expires).toLocaleDateString()}</div>}
+                                    </div>
+
+                                    <h3 style={{ marginBottom: '1rem' }}>Related Tickets</h3>
+                                    {relatedTickets.length > 0 ? (
+                                        <div className="ticket-list">
+                                            {relatedTickets.map(t => (
+                                                <div key={t.id} className="ticket-card" onClick={() => onViewTicket(t)} style={{ cursor: 'pointer' }}>
+                                                    <div className="ticket-title">{t.title}</div>
+                                                    <span className="badge badge-status">{t.status}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p style={{ color: '#666' }}>No related tickets</p>
+                                    )}
                                 </div>
-                                <div className="form-group">
-                                    <label>Room</label>
-                                    <input type="text" value={form.room || ''} onChange={(e) => setForm({...form, room: e.target.value})} />
+                            ) : (
+                                <div>
+                                    <div className="form-group">
+                                        <label>Name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Model</label>
+                                            <input
+                                                type="text"
+                                                value={formData.model}
+                                                onChange={(e) => setFormData({...formData, model: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Serial</label>
+                                            <input
+                                                type="text"
+                                                value={formData.serial_number}
+                                                onChange={(e) => setFormData({...formData, serial_number: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Make</label>
-                                    <input type="text" value={form.make || ''} onChange={(e) => setForm({...form, make: e.target.value})} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Model</label>
-                                    <input type="text" value={form.model || ''} onChange={(e) => setForm({...form, model: e.target.value})} />
-                                </div>
-                            </div>
+                            )}
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button className="btn btn-primary" onClick={() => onSave(form)}>Save</button>
+                            {!editing ? (
+                                <>
+                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                        Edit
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setFormData(item);
+                                        setEditing(false);
+                                    }}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSave}>
+                                        Save
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
