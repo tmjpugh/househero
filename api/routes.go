@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/handlers"
-	"github.com/tmjpugh/househero/internal/middleware"
 )
 
 func SetupRoutes(db *database.DB) *mux.Router {
