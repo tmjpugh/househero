@@ -1,18 +1,18 @@
 FROM golang:1.21-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /build/server ./cmd/server
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
-WORKDIR /root/
 
-COPY --from=builder /app/househero .
-COPY --from=builder /app/home-ticket-system.html .
+WORKDIR /app
+COPY --from=builder /build/server .
+COPY --from=builder /build/home-ticket-system.html .
 
 EXPOSE 8080
 CMD ["./server"]
