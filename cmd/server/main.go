@@ -1,8 +1,3 @@
-
----
-
-## **`cmd/server/main.go`**
-```go
 package main
 
 import (
