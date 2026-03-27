@@ -7,4 +7,5 @@ github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWS
 github.com/joho/godotenv v1.5.1 h1:7P4SfwW0WPt4I8LLVewwpy+jlpsLshMhXeTyK9Q7NE=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkxj2DAdf4BsAE=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnLaroAZDhXL+UFaXQeFs0=
-github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4xnaC4m3nauNv3eLZ7cMbtIvxS/qpf+Vm8=
+github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
+
