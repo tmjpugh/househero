@@ -5,7 +5,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o househero ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
@@ -15,4 +15,4 @@ COPY --from=builder /app/househero .
 COPY --from=builder /app/home-ticket-system.html .
 
 EXPOSE 8080
-CMD ["./househero"]
+CMD ["./server"]
