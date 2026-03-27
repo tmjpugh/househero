@@ -946,18 +946,20 @@ const dbApi = {
             const loadTickets = async () => {
                 try {
                     const ticketsData = await dbApi.getTickets(currentHome);
-                    setTickets(ticketsData);
+                     setTickets(ticketsData || []);
                 } catch (err) {
                     setError(err.message);
+                    setTickets([]);  // Set to empty array on error
                 }
             };
 
             const loadInventory = async () => {
                 try {
                     const invData = await dbApi.getInventory(currentHome);
-                    setInventory(invData);
+                    setInventory(invData || []);
                 } catch (err) {
                     setError(err.message);
+                    setInventory([]);  // set to empty array on error
                 }
             };
 
@@ -1095,9 +1097,8 @@ const addHome = async (home) => {
             };
 
             const currentHomeData = homes.find(h => h.id === currentHome);
-            const currentTickets = tickets.filter(t => t.home_id === currentHome);
-            const currentInventory = inventory.filter(i => i.home_id === currentHome);
-
+            const currentTickets = (tickets || []).filter(t => t.home_id === currentHome);
+            const currentInventory = (inventory || []).filter(i => i.home_id === currentHome);
             const filteredTickets = currentTickets.filter(ticket => {
                 if (filters.status !== 'all' && ticket.status !== filters.status) return false;
                 if (filters.priority !== 'all' && ticket.priority !== filters.priority) return false;
