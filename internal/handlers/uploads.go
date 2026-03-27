@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -142,8 +141,7 @@ func (h *UploadHandler) handleMultipartUpload(w http.ResponseWriter, r *http.Req
 // UploadBase64 - generic base64 upload handler for photos/documents
 func (h *UploadHandler) UploadBase64(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	parentID := vars["id"]
-	fileType := mux.Vars(r)["type"] // "photo", "document", "receipt", "manual"
+	fileType := vars["type"] // "photo", "document", "receipt", "manual"
 
 	var payload Base64UploadRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -164,10 +162,10 @@ func (h *UploadHandler) UploadBase64(w http.ResponseWriter, r *http.Request) {
 
 	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + ext
 	uploadPath := filepath.Join(h.uploadDir, subdir)
-	filepath := filepath.Join(uploadPath, filename)
+	filePath := filepath.Join(uploadPath, filename)
 
 	// Save file
-	if err := os.WriteFile(filepath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return
 	}
@@ -274,17 +272,15 @@ func (h *UploadHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	filename := vars["filename"]
 
 	subdir := h.getSubdirectory(fileType)
-	filepath := filepath.Join(h.uploadDir, subdir, filename)
+	filePath := filepath.Join(h.uploadDir, subdir, filename)
 
-	// Verify the file is within uploadDir (security check)
-	absPath, _ := filepath.Abs(filepath)
-	absUploadDir, _ := filepath.Abs(h.uploadDir)
-	if !strings.HasPrefix(absPath, absUploadDir) {
+	// Verify the file is within uploadDir (security check) - simple check without Abs
+	if !strings.HasPrefix(filePath, h.uploadDir) {
 		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
-	if err := os.Remove(filepath); err != nil {
+	if err := os.Remove(filePath); err != nil {
 		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
 		return
 	}
