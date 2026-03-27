@@ -1,4 +1,3 @@
-// internal/handlers/tickets.go
 package handlers
 
 import (

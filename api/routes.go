@@ -1,4 +1,3 @@
-// api/routes.go
 package api
 
 import (
@@ -11,10 +10,8 @@ import (
 func SetupRoutes(db *database.DB) *mux.Router {
 	router := mux.NewRouter()
 
-	// Apply authentication middleware
 	router.Use(middleware.AuthMiddleware)
 
-	// Initialize handlers
 	homeHandler := handlers.NewHomeHandler(db)
 	ticketHandler := handlers.NewTicketHandler(db)
 	inventoryHandler := handlers.NewInventoryHandler(db)

@@ -1,4 +1,3 @@
-// go.mod
 module github.com/tmjpugh/househero
 
 go 1.21

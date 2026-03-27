@@ -1,4 +1,3 @@
-// internal/handlers/inventory.go
 package handlers
 
 import (
@@ -170,7 +169,7 @@ func (h *InventoryHandler) AddDocument(w http.ResponseWriter, r *http.Request) {
 	itemID := vars["id"]
 
 	var doc models.Document
-	docType := r.URL.Query().Get("type") // "manual" or "receipt"
+	docType := r.URL.Query().Get("type")
 
 	if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

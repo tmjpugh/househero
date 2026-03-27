@@ -1,4 +1,3 @@
-// internal/handlers/homes.go
 package handlers
 
 import (

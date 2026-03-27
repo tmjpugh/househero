@@ -1,4 +1,8 @@
-// cmd/server/main.go
+
+---
+
+## **`cmd/server/main.go`**
+```go
 package main
 
 import (
@@ -7,35 +11,17 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/api"
+	"github.com/tmjpugh/househero/internal/config"
+	"github.com/tmjpugh/househero/internal/database"
 )
 
 func main() {
 	godotenv.Load()
 
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
-	}
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = "5432"
-	}
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "househero"
-	}
-	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "househero_dev"
-	}
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "househero_db"
-	}
+	cfg := config.Load()
 
-	db, err := database.New(dbHost, dbPort, dbUser, dbPassword, dbName)
+	db, err := database.New(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -47,11 +33,6 @@ func main() {
 
 	router := api.SetupRoutes(db)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Printf("Server starting on port %s", cfg.Port)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
 }
