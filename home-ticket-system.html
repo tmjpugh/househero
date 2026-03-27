@@ -8,7 +8,6 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Keep all the existing CSS from your current file */
         * {
             margin: 0;
             padding: 0;
@@ -27,7 +26,6 @@
             flex-direction: column;
         }
 
-        /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -57,7 +55,6 @@
             display: none;
         }
 
-        /* Main Layout */
         .main-layout {
             display: flex;
             flex: 1;
@@ -66,7 +63,6 @@
             width: 100%;
         }
 
-        /* Sidebar */
         .sidebar {
             width: 250px;
             background: white;
@@ -102,14 +98,12 @@
             color: white;
         }
 
-        /* Content Area */
         .content {
             flex: 1;
             padding: 1.5rem;
             overflow-y: auto;
         }
 
-        /* Buttons */
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -141,7 +135,17 @@
             background: #e0e0e0;
         }
 
-        /* Dashboard */
+        .btn-danger {
+            background: #ff4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            background: #cc0000;
+        }
+
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -166,7 +170,6 @@
             font-size: 0.9rem;
         }
 
-        /* Ticket List */
         .ticket-list {
             display: grid;
             gap: 1rem;
@@ -218,7 +221,6 @@
             color: #4338ca;
         }
 
-        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -302,471 +304,5 @@
         .close-btn {
             background: none;
             border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .close-btn:hover {
-            background: #f0f0f0;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: #666;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        @media (max-width: 768px) {
-            .menu-toggle {
-                display: block;
-            }
-
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: 60px;
-                height: calc(100vh - 60px);
-                z-index: 1000;
-                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            }
-
-            .sidebar.mobile-hidden {
-                transform: translateX(-100%);
-            }
-
-            .content {
-                padding: 1rem;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-
-        // API Helper
-        const api = {
-            get: async (endpoint) => {
-                const response = await fetch(endpoint);
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
-            },
-            post: async (endpoint, data) => {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
-            },
-            put: async (endpoint, data) => {
-                const response = await fetch(endpoint, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
-            },
-            delete: async (endpoint) => {
-                const response = await fetch(endpoint, { method: 'DELETE' });
-                if (!response.ok) throw new Error('API Error');
-                return response.json();
-            }
-        };
-
-        function App() {
-            const [currentHome, setCurrentHome] = useState(null);
-            const [view, setView] = useState('tickets');
-            const [tickets, setTickets] = useState([]);
-            const [showModal, setShowModal] = useState(null);
-            const [modalData, setModalData] = useState({});
-            const [sidebarOpen, setSidebarOpen] = useState(true);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
-
-            // Load tickets on mount
-            useEffect(() => {
-                loadTickets();
-            }, [currentHome]);
-
-            const loadTickets = async () => {
-                if (!currentHome) return;
-                setLoading(true);
-                try {
-                    const data = await api.get(`/api/tickets?home_id=${currentHome}`);
-                    setTickets(data || []);
-                    setError('');
-                } catch (err) {
-                    setError('Failed to load tickets');
-                }
-                setLoading(false);
-            };
-
-            const addTicket = async (ticket) => {
-                try {
-                    const newTicket = await api.post('/api/tickets', {
-                        ...ticket,
-                        home_id: currentHome,
-                        status: 'open'
-                    });
-                    setTickets([...tickets, newTicket]);
-                    setShowModal(null);
-                    setError('');
-                } catch (err) {
-                    setError('Failed to create ticket');
-                }
-            };
-
-            const updateTicket = async (ticketId, updates) => {
-                try {
-                    await api.put(`/api/tickets/${ticketId}`, updates);
-                    setTickets(tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t));
-                    setShowModal(null);
-                    setError('');
-                } catch (err) {
-                    setError('Failed to update ticket');
-                }
-            };
-
-            const deleteTicket = async (ticketId) => {
-                try {
-                    await api.delete(`/api/tickets/${ticketId}`);
-                    setTickets(tickets.filter(t => t.id !== ticketId));
-                    setError('');
-                } catch (err) {
-                    setError('Failed to delete ticket');
-                }
-            };
-
-            if (!currentHome) {
-                return (
-                    <div className="app">
-                        <header className="header">
-                            <div className="header-content">
-                                <h1>Home Maintenance Tracker</h1>
-                            </div>
-                        </header>
-                        <div className="content">
-                            <h2>Select Home</h2>
-                            <div style={{ marginTop: '2rem' }}>
-                                <input
-                                    type="number"
-                                    placeholder="Enter Home ID"
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            setCurrentHome(parseInt(e.target.value));
-                                        }
-                                    }}
-                                    style={{ padding: '0.75rem', fontSize: '1rem', marginRight: '1rem' }}
-                                />
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                        const homeId = prompt('Enter Home ID:');
-                                        if (homeId) setCurrentHome(parseInt(homeId));
-                                    }}
-                                >
-                                    Select Home
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="app">
-                    <header className="header">
-                        <div className="header-content">
-                            <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                                ☰
-                            </button>
-                            <h1>Home Maintenance (ID: {currentHome})</h1>
-                            <button className="btn btn-secondary" onClick={() => setCurrentHome(null)}>
-                                Change Home
-                            </button>
-                        </div>
-                    </header>
-
-                    <div className="main-layout">
-                        <aside className={`sidebar ${!sidebarOpen ? 'mobile-hidden' : ''}`}>
-                            <nav>
-                                <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`}
-                                     onClick={() => setView('tickets')}>
-                                    🎫 Tickets
-                                </div>
-                            </nav>
-                        </aside>
-
-                        <main className="content">
-                            {error && <div className="error">{error}</div>}
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h2>Tickets</h2>
-                                <button className="btn btn-primary" onClick={() => setShowModal('add-ticket')}>
-                                    + New Ticket
-                                </button>
-                            </div>
-
-                            {loading ? (
-                                <div className="loading">Loading tickets...</div>
-                            ) : (
-                                <div className="ticket-list">
-                                    {tickets && tickets.length > 0 ? (
-                                        tickets.map(ticket => (
-                                            <div key={ticket.id} className={`ticket-card priority-${ticket.priority}`}>
-                                                <div className="ticket-title">{ticket.title}</div>
-                                                <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
-                                                    {ticket.description?.substring(0, 100)}
-                                                </div>
-                                                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                                    <span className="badge badge-status">{ticket.status}</span>
-                                                    <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
-                                                        {ticket.priority}
-                                                    </span>
-                                                </div>
-                                                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                                    <button
-                                                        className="btn btn-secondary"
-                                                        style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
-                                                        onClick={() => {
-                                                            setModalData(ticket);
-                                                            setShowModal('edit-ticket');
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-secondary"
-                                                        style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#fee2e2', color: '#991b1b' }}
-                                                        onClick={() => deleteTicket(ticket.id)}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                            No tickets yet. Create your first one!
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </main>
-                    </div>
-
-                    {/* Add Ticket Modal */}
-                    {showModal === 'add-ticket' && (
-                        <AddTicketModal
-                            onClose={() => setShowModal(null)}
-                            onSave={addTicket}
-                        />
-                    )}
-
-                    {/* Edit Ticket Modal */}
-                    {showModal === 'edit-ticket' && (
-                        <EditTicketModal
-                            ticket={modalData}
-                            onClose={() => setShowModal(null)}
-                            onSave={(updates) => updateTicket(modalData.id, updates)}
-                        />
-                    )}
-                </div>
-            );
-        }
-
-        function AddTicketModal({ onClose, onSave }) {
-            const [formData, setFormData] = useState({
-                title: '',
-                description: '',
-                type: 'Repair Request',
-                priority: 'medium',
-                requester: 'Self',
-                room: 'Kitchen'
-            });
-
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>New Ticket</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="form-group">
-                                <label>Title *</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                    placeholder="Brief description of the issue"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    placeholder="Detailed description..."
-                                />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Type *</label>
-                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                        <option>Repair Request</option>
-                                        <option>Maintenance</option>
-                                        <option>Upgrade</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Priority *</label>
-                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Requester *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.requester}
-                                        onChange={(e) => setFormData({...formData, requester: e.target.value})}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Room *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => formData.title && onSave(formData)}
-                                disabled={!formData.title}
-                            >
-                                Create Ticket
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function EditTicketModal({ ticket, onClose, onSave }) {
-            const [formData, setFormData] = useState(ticket);
-
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>Edit Ticket #{ticket.id}</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="form-group">
-                                <label>Title *</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea
-                                    value={formData.description || ''}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Room *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Inventory Item</label>
-                                    <input
-                                        type="text"
-                                        value={formData.inventory_item || ''}
-                                        onChange={(e) => setFormData({...formData, inventory_item: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Status *</label>
-                                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                                        <option value="open">Open</option>
-                                        <option value="in-progress">In Progress</option>
-                                        <option value="waiting">Waiting</option>
-                                        <option value="closed">Closed</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Priority *</label>
-                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => onSave(formData)}
-                            >
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
-
-</body>
-</html>
+            font-size: 1.*
+

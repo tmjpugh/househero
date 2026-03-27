@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/tmjpugh/househero/api"
@@ -26,7 +25,7 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	router := api.SetupRoutes(db)
+	router := api.SetupRoutes(db, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
