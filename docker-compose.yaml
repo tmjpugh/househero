@@ -1,0 +1,32 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: househero
+      POSTGRES_PASSWORD: househero_dev
+      POSTGRES_DB: househero_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: househero
+      DB_PASSWORD: househero_dev
+      DB_NAME: househero_db
+      JWT_SECRET: your-secret-key
+      PORT: 8080
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

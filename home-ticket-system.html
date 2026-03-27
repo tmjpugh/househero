@@ -1,0 +1,2935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Maintenance Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            display: none;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: white;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            padding: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.mobile-hidden {
+            transform: translateX(-100%);
+            position: fixed;
+            z-index: 1000;
+            height: calc(100vh - 60px);
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-item:hover {
+            background: #f0f0f0;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Home Selection */
+        .home-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem 0;
+        }
+
+        .home-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .home-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .home-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .home-info {
+            padding: 1rem;
+        }
+
+        .home-info h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .home-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .add-home-card {
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            font-size: 3rem;
+            color: #ccc;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stat-card.high {
+            border-left: 4px solid #ef4444;
+        }
+
+        .stat-card.medium {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .stat-card.low {
+            border-left: 4px solid #10b981;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        /* Ticket List */
+        .ticket-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .ticket-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #ddd;
+        }
+
+        .ticket-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        }
+
+        .ticket-card.priority-high {
+            border-left-color: #ef4444;
+        }
+
+        .ticket-card.priority-medium {
+            border-left-color: #f59e0b;
+        }
+
+        .ticket-card.priority-low {
+            border-left-color: #10b981;
+        }
+
+        .ticket-card.aged-high {
+            background: #fef2f2;
+        }
+
+        .ticket-card.aged-medium {
+            background: #fffbeb;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .ticket-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .ticket-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .clickable-field {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .clickable-field:hover {
+            color: #764ba2;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-status {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .badge-priority {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Comments */
+        .comments-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e5e5e5;
+        }
+
+        .comment {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .comment.system-comment {
+            background: #e0e7ff;
+            border-left: 3px solid #4338ca;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .comment-body {
+            color: #333;
+        }
+
+        /* File upload */
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f9f9ff;
+        }
+
+        .file-list {
+            margin-top: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        /* Inventory */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .inventory-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inventory-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        }
+
+        .inventory-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .inventory-icons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .inventory-icon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .inventory-icon-group:hover {
+            opacity: 0.7;
+        }
+
+        .inventory-icon-count {
+            font-size: 0.85rem;
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .inventory-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .inventory-details div {
+            margin-bottom: 0.5rem;
+        }
+
+        .room-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .room-header h3 {
+            font-size: 1.3rem;
+        }
+
+        .room-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .photo-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .photo-item .delete-photo {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .multi-select-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .multi-select-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #e0e7ff;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .multi-select-item input {
+            margin: 0;
+            width: auto;
+        }
+
+        .linked-tickets {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .linked-ticket-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+            cursor: pointer;
+        }
+
+        .linked-ticket-item:hover {
+            background: #f0f0f0;
+        }
+
+        .person-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .person-header {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .person-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 60px;
+                height: calc(100vh - 60px);
+                z-index: 1000;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar.mobile-hidden {
+                transform: translateX(-100%);
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .ticket-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Sample initial data
+        const initialData = {
+            homes: [
+                {
+                    id: 1,
+                    name: "Main Residence",
+                    address: "123 Main St",
+                    photo: null
+                }
+            ],
+            tickets: [],
+            inventory: [],
+            people: ["Self", "Spouse", "Contractor"],
+            rooms: ["Kitchen", "Living Room", "Master Bedroom", "Bathroom", "Garage", "Basement"],
+            ticketTypes: ["Repair Request", "Maintenance", "Upgrade", "Emergency", "Inspection"],
+            makes: ["GE", "Whirlpool", "Samsung", "LG"],
+            models: [],
+            types: ["Appliance", "HVAC", "Plumbing", "Electrical", "Structural"],
+            agingThresholds: {
+                high: { yellow: 7, red: 14 },
+                medium: { yellow: 14, red: 30 },
+                low: { yellow: 30, red: 60 }
+            },
+            settingsPassword: "1234"
+        };
+
+        function App() {
+            const [currentHome, setCurrentHome] = useState(null);
+            const [view, setView] = useState('home-select');
+            const [data, setData] = useState(() => {
+                const saved = localStorage.getItem('homeMaintenanceData');
+                return saved ? JSON.parse(saved) : initialData;
+            });
+            const [showModal, setShowModal] = useState(null);
+            const [modalData, setModalData] = useState({});
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [filters, setFilters] = useState({
+                status: 'all',
+                priority: 'all',
+                type: 'all',
+                room: 'all'
+            });
+            const [settingsAuthenticated, setSettingsAuthenticated] = useState(false);
+            const [selectedPerson, setSelectedPerson] = useState(null);
+
+            useEffect(() => {
+                localStorage.setItem('homeMaintenanceData', JSON.stringify(data));
+            }, [data]);
+
+            const addHome = (home) => {
+                const newHome = { ...home, id: Date.now() };
+                setData(prev => ({ ...prev, homes: [...prev.homes, newHome] }));
+                setCurrentHome(newHome.id);
+                setView('dashboard');
+            };
+
+            const addTicket = (ticket) => {
+                const newTicket = {
+                    ...ticket,
+                    id: Date.now(),
+                    homeId: currentHome,
+                    createdAt: new Date().toISOString(),
+                    status: 'open',
+                    comments: [],
+                    photos: [],
+                    blockedBy: [],
+                    isBlocking: []
+                };
+                setData(prev => ({ ...prev, tickets: [...prev.tickets, newTicket] }));
+                setShowModal(null);
+            };
+
+            const updateTicket = (ticketId, updates) => {
+                setData(prev => ({
+                    ...prev,
+                    tickets: prev.tickets.map(t => {
+                        if (t.id === ticketId) {
+                            const oldTicket = { ...t };
+                            const updatedTicket = { ...t, ...updates };
+                            const newComments = [...(t.comments || [])];
+
+                            // Generate automatic comments for changes
+                            if (updates.status && updates.status !== t.status) {
+                                newComments.push({
+                                    id: Date.now(),
+                                    text: `Status changed from ${t.status} to ${updates.status}`,
+                                    author: 'System',
+                                    timestamp: new Date().toISOString(),
+                                    isSystem: true
+                                });
+                                if (updates.status === 'closed' && !updates.closedAt) {
+                                    updatedTicket.closedAt = new Date().toISOString();
+                                }
+                            }
+                            if (updates.priority && updates.priority !== t.priority) {
+                                newComments.push({
+                                    id: Date.now() + 1,
+                                    text: `Priority changed from ${t.priority} to ${updates.priority}`,
+                                    author: 'System',
+                                    timestamp: new Date().toISOString(),
+                                    isSystem: true
+                                });
+                            }
+                            if (updates.type && updates.type !== t.type) {
+                                newComments.push({
+                                    id: Date.now() + 2,
+                                    text: `Type changed from ${t.type} to ${updates.type}`,
+                                    author: 'System',
+                                    timestamp: new Date().toISOString(),
+                                    isSystem: true
+                                });
+                            }
+
+                            updatedTicket.comments = newComments;
+                            return updatedTicket;
+                        }
+                        return t;
+                    })
+                }));
+            };
+
+            const addComment = (ticketId, comment) => {
+                setData(prev => ({
+                    ...prev,
+                    tickets: prev.tickets.map(t =>
+                        t.id === ticketId
+                            ? {
+                                ...t,
+                                comments: [
+                                    ...t.comments,
+                                    {
+                                        id: Date.now(),
+                                        text: comment.text,
+                                        author: comment.author,
+                                        timestamp: new Date().toISOString()
+                                    }
+                                ]
+                            }
+                            : t
+                    )
+                }));
+            };
+
+            const addInventoryItem = (item) => {
+                const newItem = {
+                    ...item,
+                    id: Date.now(),
+                    homeId: currentHome,
+                    notes: [],
+                    manuals: [],
+                    receipts: []
+                };
+                setData(prev => ({ ...prev, inventory: [...prev.inventory, newItem] }));
+                setShowModal(null);
+            };
+
+            const updateInventoryItem = (itemId, updates) => {
+                setData(prev => ({
+                    ...prev,
+                    inventory: prev.inventory.map(item =>
+                        item.id === itemId ? { ...item, ...updates } : item
+                    )
+                }));
+            };
+
+            const getTicketAge = (createdAt) => {
+                const days = Math.floor((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24));
+                return days;
+            };
+
+            const getTicketAgeColor = (ticket) => {
+                const age = getTicketAge(ticket.createdAt);
+                const thresholds = data.agingThresholds[ticket.priority] || data.agingThresholds.medium;
+                
+                if (age >= thresholds.red) return 'aged-high';
+                if (age >= thresholds.yellow) return 'aged-medium';
+                return '';
+            };
+
+            const currentHomeData = data.homes.find(h => h.id === currentHome);
+            const currentTickets = data.tickets.filter(t => t.homeId === currentHome);
+            const currentInventory = data.inventory.filter(i => i.homeId === currentHome);
+
+            const filteredTickets = currentTickets.filter(ticket => {
+                if (filters.status !== 'all' && ticket.status !== filters.status) return false;
+                if (filters.priority !== 'all' && ticket.priority !== filters.priority) return false;
+                if (filters.type !== 'all' && ticket.type !== filters.type) return false;
+                if (filters.room !== 'all' && ticket.room !== filters.room) return false;
+                return true;
+            });
+
+            const stats = {
+                open: currentTickets.filter(t => t.status === 'open').length,
+                inProgress: currentTickets.filter(t => t.status === 'in-progress').length,
+                high: currentTickets.filter(t => t.priority === 'high' && t.status !== 'closed').length,
+                totalInventory: currentInventory.length
+            };
+
+            const handleSettingsClick = () => {
+                if (settingsAuthenticated) {
+                    setView('settings');
+                } else {
+                    setShowModal('settings-password');
+                }
+            };
+
+            if (view === 'home-select') {
+                return <HomeSelector homes={data.homes} onSelectHome={(homeId) => {
+                    setCurrentHome(homeId);
+                    setView('dashboard');
+                }} onAddHome={() => setShowModal('add-home')} />;
+            }
+
+            return (
+                <div className="app">
+                    <header className="header">
+                        <div className="header-content">
+                            <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                                ☰
+                            </button>
+                            <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
+                            <button className="btn btn-secondary" onClick={() => {
+                                setCurrentHome(null);
+                                setView('home-select');
+                            }}>
+                                Change Home
+                            </button>
+                        </div>
+                    </header>
+
+                    <div className="main-layout">
+                        <aside className={`sidebar ${!sidebarOpen ? 'mobile-hidden' : ''}`}>
+                            <nav>
+                                <div className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}
+                                     onClick={() => setView('dashboard')}>
+                                    📊 Dashboard
+                                </div>
+                                <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`}
+                                     onClick={() => setView('tickets')}>
+                                    🎫 Tickets
+                                </div>
+                                <div className={`nav-item ${view === 'inventory' ? 'active' : ''}`}
+                                     onClick={() => setView('inventory')}>
+                                    📦 Inventory
+                                </div>
+                                <div className={`nav-item ${view === 'rooms' ? 'active' : ''}`}
+                                     onClick={() => setView('rooms')}>
+                                    🏠 Rooms
+                                </div>
+                                <div className={`nav-item ${view === 'people' ? 'active' : ''}`}
+                                     onClick={() => {
+                                        setView('people');
+                                        setSelectedPerson(null);
+                                     }}>
+                                    👤 People
+                                </div>
+                                <div className={`nav-item ${view === 'settings' ? 'active' : ''}`}
+                                     onClick={handleSettingsClick}>
+                                    ⚙️ Settings
+                                </div>
+                            </nav>
+                        </aside>
+
+                        <main className="content">
+                            {view === 'dashboard' && (
+                                <DashboardView 
+                                    stats={stats} 
+                                    tickets={currentTickets}
+                                    home={currentHomeData}
+                                    onNewTicket={() => setShowModal('add-ticket')}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    onNavigateRoom={(room) => {
+                                        setView('rooms');
+                                    }}
+                                    onNavigatePerson={(person) => {
+                                        setSelectedPerson(person);
+                                        setView('people');
+                                    }}
+                                    onNavigateInventory={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'tickets' && (
+                                <TicketsView
+                                    tickets={filteredTickets}
+                                    filters={filters}
+                                    onFilterChange={setFilters}
+                                    data={data}
+                                    onNewTicket={() => setShowModal('add-ticket')}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    getTicketAgeColor={getTicketAgeColor}
+                                    onNavigateRoom={(room) => {
+                                        setView('rooms');
+                                    }}
+                                    onNavigatePerson={(person) => {
+                                        setSelectedPerson(person);
+                                        setView('people');
+                                    }}
+                                    onNavigateInventory={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'inventory' && (
+                                <InventoryView
+                                    inventory={currentInventory}
+                                    onNewItem={() => setShowModal('add-inventory')}
+                                    onItemClick={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'rooms' && (
+                                <RoomsView
+                                    rooms={data.rooms}
+                                    tickets={currentTickets}
+                                    inventory={currentInventory}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                    onItemClick={(item) => {
+                                        setModalData(item);
+                                        setShowModal('view-inventory');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'people' && (
+                                <PeopleView
+                                    people={data.people}
+                                    tickets={currentTickets}
+                                    selectedPerson={selectedPerson}
+                                    onSelectPerson={setSelectedPerson}
+                                    onTicketClick={(ticket) => {
+                                        setModalData(ticket);
+                                        setShowModal('view-ticket');
+                                    }}
+                                />
+                            )}
+
+                            {view === 'settings' && settingsAuthenticated && (
+                                <SettingsView
+                                    data={data}
+                                    setData={setData}
+                                    currentHome={currentHomeData}
+                                    onUpdateHome={(updates) => {
+                                        setData(prev => ({
+                                            ...prev,
+                                            homes: prev.homes.map(h =>
+                                                h.id === currentHome ? { ...h, ...updates } : h
+                                            )
+                                        }));
+                                    }}
+                                    onLogout={() => {
+                                        setSettingsAuthenticated(false);
+                                        setView('dashboard');
+                                    }}
+                                />
+                            )}
+                        </main>
+                    </div>
+
+                    {/* Modals */}
+                    {showModal === 'settings-password' && (
+                        <SettingsPasswordModal
+                            onClose={() => setShowModal(null)}
+                            onAuthenticate={() => {
+                                setSettingsAuthenticated(true);
+                                setShowModal(null);
+                                setView('settings');
+                            }}
+                            correctPassword={data.settingsPassword}
+                        />
+                    )}
+
+                    {showModal === 'add-home' && (
+                        <AddHomeModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addHome}
+                        />
+                    )}
+
+                    {showModal === 'add-ticket' && (
+                        <AddTicketModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addTicket}
+                            data={data}
+                            inventory={currentInventory}
+                        />
+                    )}
+
+                    {showModal === 'view-ticket' && (
+                        <ViewTicketModal
+                            ticket={modalData}
+                            onClose={() => setShowModal(null)}
+                            onUpdate={updateTicket}
+                            onAddComment={addComment}
+                            data={data}
+                            inventory={currentInventory}
+                            onViewInventory={(item) => {
+                                setModalData(item);
+                                setShowModal('view-inventory');
+                            }}
+                            allTickets={currentTickets}
+                        />
+                    )}
+
+                    {showModal === 'add-inventory' && (
+                        <AddInventoryModal
+                            onClose={() => setShowModal(null)}
+                            onSave={addInventoryItem}
+                            data={data}
+                        />
+                    )}
+
+                    {showModal === 'view-inventory' && (
+                        <ViewInventoryModal
+                            item={modalData}
+                            onClose={() => setShowModal(null)}
+                            onUpdate={updateInventoryItem}
+                            tickets={currentTickets}
+                            onViewTicket={(ticket) => {
+                                setModalData(ticket);
+                                setShowModal('view-ticket');
+                            }}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function HomeSelector({ homes, onSelectHome, onAddHome }) {
+            return (
+                <div className="content">
+                    <h2 style={{ marginBottom: '2rem' }}>Select a Home</h2>
+                    <div className="home-selector">
+                        {homes.map(home => (
+                            <div key={home.id} className="home-card" onClick={() => onSelectHome(home.id)}>
+                                <div className="home-image" style={home.photo ? {
+                                    backgroundImage: `url(${home.photo})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                } : {}}>
+                                    {!home.photo && <div style={{ 
+                                        height: '100%', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center',
+                                        fontSize: '4rem'
+                                    }}>🏠</div>}
+                                </div>
+                                <div className="home-info">
+                                    <h3>{home.name}</h3>
+                                    <p>{home.address}</p>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="home-card add-home-card" onClick={onAddHome}>
+                            +
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            const recentTickets = tickets.slice(-5).reverse();
+
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Dashboard</h2>
+                        <button className="btn btn-primary" onClick={onNewTicket}>
+                            + New Ticket
+                        </button>
+                    </div>
+
+                    {home?.photo && (
+                        <div style={{ 
+                            marginBottom: '2rem', 
+                            borderRadius: '12px', 
+                            overflow: 'hidden',
+                            position: 'relative',
+                            height: '300px'
+                        }}>
+                            <img 
+                                src={home.photo} 
+                                alt={home.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                                color: 'white',
+                                padding: '2rem',
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold'
+                            }}>
+                                {home.address}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="dashboard">
+                        <div className="stat-card">
+                            <h3>{stats.open}</h3>
+                            <p>Open Tickets</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{stats.inProgress}</h3>
+                            <p>In Progress</p>
+                        </div>
+                        <div className="stat-card high">
+                            <h3>{stats.high}</h3>
+                            <p>High Priority</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{stats.totalInventory}</h3>
+                            <p>Inventory Items</p>
+                        </div>
+                    </div>
+
+                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Recent Tickets</h3>
+                    <div className="ticket-list">
+                        {recentTickets.map(ticket => (
+                            <TicketCard 
+                                key={ticket.id} 
+                                ticket={ticket} 
+                                onClick={() => onTicketClick(ticket)}
+                                onNavigateRoom={onNavigateRoom}
+                                onNavigatePerson={onNavigatePerson}
+                                onNavigateInventory={onNavigateInventory}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h2>Tickets</h2>
+                        <button className="btn btn-primary" onClick={onNewTicket}>
+                            + New Ticket
+                        </button>
+                    </div>
+
+                    <div className="filters">
+                        <div className="filter-group">
+                            <label>Status</label>
+                            <select value={filters.status} onChange={(e) => onFilterChange({...filters, status: e.target.value})}>
+                                <option value="all">All</option>
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="waiting">Waiting</option>
+                                <option value="blocking">Blocking</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Priority</label>
+                            <select value={filters.priority} onChange={(e) => onFilterChange({...filters, priority: e.target.value})}>
+                                <option value="all">All</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Type</label>
+                            <select value={filters.type} onChange={(e) => onFilterChange({...filters, type: e.target.value})}>
+                                <option value="all">All Types</option>
+                                {data.ticketTypes.map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Room</label>
+                            <select value={filters.room} onChange={(e) => onFilterChange({...filters, room: e.target.value})}>
+                                <option value="all">All Rooms</option>
+                                {data.rooms.map(room => (
+                                    <option key={room} value={room}>{room}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="ticket-list">
+                        {tickets.map(ticket => (
+                            <TicketCard 
+                                key={ticket.id} 
+                                ticket={ticket} 
+                                onClick={() => onTicketClick(ticket)}
+                                className={getTicketAgeColor(ticket)}
+                                onNavigateRoom={onNavigateRoom}
+                                onNavigatePerson={onNavigatePerson}
+                                onNavigateInventory={onNavigateInventory}
+                            />
+                        ))}
+                        {tickets.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                                No tickets found. Create your first ticket!
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            return (
+                <div className={`ticket-card priority-${ticket.priority} ${className}`}>
+                    <div className="ticket-header">
+                        <div style={{ flex: 1 }}>
+                            <div className="ticket-title">{ticket.title}</div>
+                            <div className="ticket-meta">
+                                <span>#{ticket.id}</span>
+                                <span>📍 <span className="clickable-field" onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNavigateRoom && onNavigateRoom(ticket.room);
+                                }}>{ticket.room}</span></span>
+                                <span>👤 <span className="clickable-field" onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNavigatePerson && onNavigatePerson(ticket.requester);
+                                }}>{ticket.requester}</span></span>
+                                {ticket.inventoryItem && <span>📦 <span className="clickable-field" onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Note: This would need inventory item data to work fully
+                                }}>{ticket.inventoryItem}</span></span>}
+                            </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <span className="badge badge-status">{ticket.status}</span>
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                        {ticket.description?.substring(0, 100)}{ticket.description?.length > 100 ? '...' : ''}
+                    </div>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem' }} onClick={(e) => e.stopPropagation()}>
+                        <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
+                            {ticket.type}
+                        </span>
+                        <span className="badge badge-priority">
+                            {ticket.priority} priority
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 'auto' }}>
+                            {new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                    </div>
+                    <div onClick={onClick} style={{ cursor: 'pointer', marginTop: '0.5rem', padding: '0.5rem', borderRadius: '4px' }}>
+                        <span style={{ color: '#667eea', fontSize: '0.85rem' }}>Click to view details →</span>
+                    </div>
+                </div>
+            );
+        }
+
+        function InventoryView({ inventory, onNewItem, onItemClick }) {
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h2>Inventory</h2>
+                        <button className="btn btn-primary" onClick={onNewItem}>
+                            + Add Item
+                        </button>
+                    </div>
+
+                    <div className="inventory-grid">
+                        {inventory.map(item => (
+                            <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
+                                <div className="inventory-header">{item.name}</div>
+                                <div className="inventory-icons">
+                                    {(item.manuals && item.manuals.length > 0) && (
+                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                            <span>📄</span>
+                                            <span className="inventory-icon-count">{item.manuals.length}</span>
+                                        </div>
+                                    )}
+                                    {(item.receipts && item.receipts.length > 0) && (
+                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                            <span>🧾</span>
+                                            <span className="inventory-icon-count">{item.receipts.length}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="inventory-details">
+                                    <div><strong>Type:</strong> {item.type}</div>
+                                    <div><strong>Make:</strong> {item.make}</div>
+                                    <div><strong>Model:</strong> {item.model}</div>
+                                    <div><strong>Room:</strong> {item.room}</div>
+                                    {item.serialNumber && <div><strong>Serial:</strong> {item.serialNumber}</div>}
+                                    {item.purchaseDate && (
+                                        <div><strong>Purchased:</strong> {new Date(item.purchaseDate).toLocaleDateString()}</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {inventory.length === 0 && (
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
+                                No inventory items yet. Add your first item!
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function RoomsView({ rooms, tickets, inventory, onTicketClick, onItemClick }) {
+            const [expandedRoom, setExpandedRoom] = useState(null);
+
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '1.5rem' }}>Rooms</h2>
+                    {rooms.map(room => {
+                        const roomTickets = tickets.filter(t => t.room === room);
+                        const roomInventory = inventory.filter(i => i.room === room);
+                        const openTickets = roomTickets.filter(t => t.status !== 'closed');
+
+                        return (
+                            <div key={room} className="room-section">
+                                <div className="room-header" onClick={() => setExpandedRoom(expandedRoom === room ? null : room)}>
+                                    <h3>{room}</h3>
+                                    <div className="room-stats">
+                                        <span>{openTickets.length} open tickets</span>
+                                        <span>{roomInventory.length} items</span>
+                                        <span>{expandedRoom === room ? '▲' : '▼'}</span>
+                                    </div>
+                                </div>
+                                {expandedRoom === room && (
+                                    <div>
+                                        <h4 style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>Tickets</h4>
+                                        {roomTickets.length > 0 ? (
+                                            <div className="ticket-list">
+                                                {roomTickets.map(ticket => (
+                                                    <TicketCard key={ticket.id} ticket={ticket} onClick={() => onTicketClick(ticket)} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets for this room</p>
+                                        )}
+                                        
+                                        <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>Inventory</h4>
+                                        {roomInventory.length > 0 ? (
+                                            <div className="inventory-grid">
+                                                {roomInventory.map(item => (
+                                                    <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
+                                                        <div className="inventory-header">{item.name}</div>
+                                                        <div className="inventory-details">
+                                                            <div><strong>Type:</strong> {item.type}</div>
+                                                            <div><strong>Make:</strong> {item.make}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No inventory items in this room</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        function PeopleView({ people, tickets, selectedPerson, onSelectPerson, onTicketClick }) {
+            if (selectedPerson) {
+                const personTickets = tickets.filter(t => t.requester === selectedPerson);
+                const openTickets = personTickets.filter(t => t.status !== 'closed');
+
+                return (
+                    <div>
+                        <button className="btn btn-secondary" onClick={() => onSelectPerson(null)} style={{ marginBottom: '1.5rem' }}>
+                            ← Back to People
+                        </button>
+                        <div className="person-section">
+                            <div className="person-header">{selectedPerson}</div>
+                            <div className="person-stats">
+                                <span>👤</span>
+                                <span>{openTickets.length} open tickets</span>
+                                <span>{personTickets.length - openTickets.length} closed</span>
+                            </div>
+                            <div style={{ marginTop: '1rem' }}>
+                                <h3 style={{ marginBottom: '1rem' }}>Tickets</h3>
+                                {personTickets.length > 0 ? (
+                                    <div className="ticket-list">
+                                        {personTickets.map(ticket => (
+                                            <TicketCard 
+                                                key={ticket.id} 
+                                                ticket={ticket} 
+                                                onClick={() => onTicketClick(ticket)}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets for this person</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    <h2 style={{ marginBottom: '1.5rem' }}>People</h2>
+                    {people.map(person => {
+                        const personTickets = tickets.filter(t => t.requester === person);
+                        const openTickets = personTickets.filter(t => t.status !== 'closed');
+
+                        return (
+                            <div key={person} className="person-section" onClick={() => onSelectPerson(person)} style={{ cursor: 'pointer' }}>
+                                <div className="person-header">{person}</div>
+                                <div className="person-stats">
+                                    <span>👤</span>
+                                    <span>{openTickets.length} open tickets</span>
+                                    <span>{personTickets.length - openTickets.length} closed</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
+            const [newPerson, setNewPerson] = useState('');
+            const [newRoom, setNewRoom] = useState('');
+            const [newType, setNewType] = useState('');
+            const [newTicketType, setNewTicketType] = useState('');
+            const [newMake, setNewMake] = useState('');
+            const [newModel, setNewModel] = useState('');
+            const [newPassword, setNewPassword] = useState('');
+
+            const addItem = (field, value, setter) => {
+                if (value.trim()) {
+                    setData(prev => ({
+                        ...prev,
+                        [field]: [...prev[field], value.trim()]
+                    }));
+                    setter('');
+                }
+            };
+
+            const removeItem = (field, value) => {
+                setData(prev => ({
+                    ...prev,
+                    [field]: prev[field].filter(item => item !== value)
+                }));
+            };
+
+            const updateThreshold = (priority, level, value) => {
+                setData(prev => ({
+                    ...prev,
+                    agingThresholds: {
+                        ...prev.agingThresholds,
+                        [priority]: {
+                            ...prev.agingThresholds[priority],
+                            [level]: parseInt(value)
+                        }
+                    }
+                }));
+            };
+
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        onUpdateHome({ photo: e.target.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const updatePassword = () => {
+                if (newPassword.trim()) {
+                    setData(prev => ({
+                        ...prev,
+                        settingsPassword: newPassword.trim()
+                    }));
+                    setNewPassword('');
+                    alert('Password updated!');
+                }
+            };
+
+            const exportData = () => {
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `home-maintenance-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            setData(imported);
+                            alert('Data imported successfully!');
+                        } catch (err) {
+                            alert('Error importing data. Please check the file format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            return (
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                        <h2>Settings</h2>
+                        <button className="btn btn-secondary" onClick={onLogout}>
+                            Logout
+                        </button>
+                    </div>
+
+                    <div className="room-section">
+                        <h3 style={{ marginBottom: '1rem' }}>Security</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="New password..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={updatePassword}>
+                                Update Password
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="room-section">
+                        <h3 style={{ marginBottom: '1rem' }}>Home Photo</h3>
+                        {currentHome?.photo && (
+                            <img src={currentHome.photo} alt="Home" className="photo-preview" />
+                        )}
+                        <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ marginTop: '1rem' }} />
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>People</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newPerson}
+                                onChange={(e) => setNewPerson(e.target.value)}
+                                placeholder="Add person..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('people', newPerson, setNewPerson)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.people.map(person => (
+                                <span key={person} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('people', person)}>
+                                    {person} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Rooms</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newRoom}
+                                onChange={(e) => setNewRoom(e.target.value)}
+                                placeholder="Add room..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('rooms', newRoom, setNewRoom)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.rooms.map(room => (
+                                <span key={room} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('rooms', room)}>
+                                    {room} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Ticket Types</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newTicketType}
+                                onChange={(e) => setNewTicketType(e.target.value)}
+                                placeholder="Add ticket type..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('ticketTypes', newTicketType, setNewTicketType)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.ticketTypes.map(type => (
+                                <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('ticketTypes', type)}>
+                                    {type} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Inventory - Makes</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newMake}
+                                onChange={(e) => setNewMake(e.target.value)}
+                                placeholder="Add make..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('makes', newMake, setNewMake)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.makes.map(make => (
+                                <span key={make} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('makes', make)}>
+                                    {make} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Inventory - Models</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newModel}
+                                onChange={(e) => setNewModel(e.target.value)}
+                                placeholder="Add model..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('models', newModel, setNewModel)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.models.map(model => (
+                                <span key={model} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('models', model)}>
+                                    {model} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Inventory - Types</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                value={newType}
+                                onChange={(e) => setNewType(e.target.value)}
+                                placeholder="Add type..."
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            />
+                            <button className="btn btn-primary" onClick={() => addItem('types', newType, setNewType)}>
+                                Add
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {data.types.map(type => (
+                                <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
+                                      onClick={() => removeItem('types', type)}>
+                                    {type} ×
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Ticket Aging Colors (days)</h3>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            {['high', 'medium', 'low'].map(priority => (
+                                <div key={priority}>
+                                    <h4 style={{ marginBottom: '0.5rem', textTransform: 'capitalize' }}>{priority} Priority</h4>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.85rem', color: '#666' }}>Yellow after (days)</label>
+                                            <input
+                                                type="number"
+                                                value={data.agingThresholds[priority].yellow}
+                                                onChange={(e) => updateThreshold(priority, 'yellow', e.target.value)}
+                                                style={{ width: '100px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.85rem', color: '#666' }}>Red after (days)</label>
+                                            <input
+                                                type="number"
+                                                value={data.agingThresholds[priority].red}
+                                                onChange={(e) => updateThreshold(priority, 'red', e.target.value)}
+                                                style={{ width: '100px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="room-section" style={{ marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Data Management</h3>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn btn-primary" onClick={exportData}>
+                                Export Data
+                            </button>
+                            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                Import Data
+                                <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }} />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Modals
+        function SettingsPasswordModal({ onClose, onAuthenticate, correctPassword }) {
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = () => {
+                if (password === correctPassword) {
+                    onAuthenticate();
+                    setPassword('');
+                } else {
+                    setError('Incorrect password');
+                    setPassword('');
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Settings Password</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Enter Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        setError('');
+                                    }}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                                    placeholder="Enter settings password"
+                                />
+                                {error && <div style={{ color: '#ef4444', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</div>}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleSubmit}>
+                                Unlock Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function AddHomeModal({ onClose, onSave }) {
+            const [formData, setFormData] = useState({ name: '', address: '', photo: null });
+
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setFormData(prev => ({ ...prev, photo: e.target.result }));
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Add New Home</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Home Name *</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="e.g., Main Residence, Vacation Home"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Address *</label>
+                                <input
+                                    type="text"
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                    placeholder="123 Main St, City, State"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Photo</label>
+                                <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                                {formData.photo && (
+                                    <img src={formData.photo} alt="Preview" className="photo-preview" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => formData.name && formData.address && onSave(formData)}
+                                disabled={!formData.name || !formData.address}
+                            >
+                                Add Home
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function AddTicketModal({ onClose, onSave, data, inventory }) {
+            const [formData, setFormData] = useState({
+                title: '',
+                description: '',
+                type: data.ticketTypes[0],
+                priority: 'medium',
+                requester: data.people[0],
+                room: data.rooms[0],
+                inventoryItemId: '',
+                estimatedCost: ''
+            });
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>New Ticket</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Title *</label>
+                                <input
+                                    type="text"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                    placeholder="Brief description of the issue"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Description</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                    placeholder="Detailed description..."
+                                />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Type *</label>
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {data.ticketTypes.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Priority *</label>
+                                    <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Requester *</label>
+                                    <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
+                                        {data.people.map(person => (
+                                            <option key={person} value={person}>{person}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Room *</label>
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {data.rooms.map(room => (
+                                            <option key={room} value={room}>{room}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Inventory Item (optional)</label>
+                                    <select value={formData.inventoryItemId} onChange={(e) => {
+                                        const item = inventory.find(i => i.id === parseInt(e.target.value));
+                                        setFormData({
+                                            ...formData,
+                                            inventoryItemId: e.target.value,
+                                            inventoryItem: item?.name || ''
+                                        });
+                                    }}>
+                                        <option value="">None</option>
+                                        {inventory.map(item => (
+                                            <option key={item.id} value={item.id}>{item.name} ({item.room})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Estimated Cost</label>
+                                    <input
+                                        type="text"
+                                        value={formData.estimatedCost}
+                                        onChange={(e) => setFormData({...formData, estimatedCost: e.target.value})}
+                                        placeholder="$0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => formData.title && onSave(formData)}
+                                disabled={!formData.title}
+                            >
+                                Create Ticket
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets }) {
+            const [editing, setEditing] = useState(false);
+            const [formData, setFormData] = useState(ticket);
+            const [newComment, setNewComment] = useState('');
+            const [commentAuthor, setCommentAuthor] = useState(data.people[0]);
+            const [blockedBySelected, setBlockedBySelected] = useState(formData.blockedBy || []);
+            const [isBlockingSelected, setIsBlockingSelected] = useState(formData.isBlocking || []);
+
+            const handlePhotoUpload = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newPhoto = {
+                            id: Date.now() + Math.random(),
+                            url: e.target.result,
+                            name: file.name,
+                            uploadedAt: new Date().toISOString()
+                        };
+                        setFormData(prev => ({
+                            ...prev,
+                            photos: [...(prev.photos || []), newPhoto]
+                        }));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const deletePhoto = (photoId) => {
+                setFormData(prev => ({
+                    ...prev,
+                    photos: prev.photos.filter(p => p.id !== photoId)
+                }));
+            };
+
+            const handleSave = () => {
+                const updates = {
+                    ...formData,
+                    blockedBy: blockedBySelected,
+                    isBlocking: isBlockingSelected
+                };
+                onUpdate(ticket.id, updates);
+                setEditing(false);
+            };
+
+            const handleAddComment = () => {
+                if (newComment.trim()) {
+                    onAddComment(ticket.id, {
+                        text: newComment,
+                        author: commentAuthor
+                    });
+                    setNewComment('');
+                }
+            };
+
+            const inventoryItem = inventory.find(i => i.id === parseInt(formData.inventoryItemId));
+            const availableTickets = allTickets.filter(t => t.id !== ticket.id && t.status !== 'closed');
+            const blockedByTickets = allTickets.filter(t => blockedBySelected.includes(t.id));
+            const isBlockingTickets = allTickets.filter(t => isBlockingSelected.includes(t.id));
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Ticket #{ticket.id}</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            {!editing ? (
+                                <div>
+                                    <h3>{ticket.title}</h3>
+                                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                                        <span className="badge badge-status" style={{ marginRight: '0.5rem' }}>{ticket.status}</span>
+                                        <span className="badge badge-priority">{ticket.priority} priority</span>
+                                    </div>
+                                    <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
+                                        <div><strong>Type:</strong> {ticket.type}</div>
+                                        <div><strong>Requester:</strong> {ticket.requester}</div>
+                                        <div><strong>Room:</strong> {ticket.room}</div>
+                                        {ticket.inventoryItem && (
+                                            <div>
+                                                <strong>Inventory Item:</strong>{' '}
+                                                <span
+                                                    style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline' }}
+                                                    onClick={() => inventoryItem && onViewInventory(inventoryItem)}
+                                                >
+                                                    {ticket.inventoryItem}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {ticket.estimatedCost && <div><strong>Estimated Cost:</strong> {ticket.estimatedCost}</div>}
+                                        {ticket.closer && <div><strong>Closed By:</strong> {ticket.closer}</div>}
+                                        <div><strong>Created:</strong> {new Date(ticket.createdAt).toLocaleString()}</div>
+                                        {ticket.closedAt && <div><strong>Closed:</strong> {new Date(ticket.closedAt).toLocaleString()}</div>}
+                                    </div>
+
+                                    {blockedByTickets.length > 0 && (
+                                        <div style={{ marginTop: '1.5rem' }}>
+                                            <strong>Waiting For:</strong>
+                                            <div className="linked-tickets">
+                                                {blockedByTickets.map(t => (
+                                                    <div key={t.id} className="linked-ticket-item" onClick={() => {
+                                                        // Navigate or open ticket - would need parent context
+                                                    }}>
+                                                        <strong>#{t.id}:</strong> {t.title} <span style={{ color: '#666', fontSize: '0.85rem' }}>({t.status})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isBlockingTickets.length > 0 && (
+                                        <div style={{ marginTop: '1.5rem' }}>
+                                            <strong>Blocking:</strong>
+                                            <div className="linked-tickets">
+                                                {isBlockingTickets.map(t => (
+                                                    <div key={t.id} className="linked-ticket-item" onClick={() => {
+                                                        // Navigate or open ticket - would need parent context
+                                                    }}>
+                                                        <strong>#{t.id}:</strong> {t.title} <span style={{ color: '#666', fontSize: '0.85rem' }}>({t.status})</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ marginTop: '1.5rem' }}>
+                                        <strong>Description:</strong>
+                                        <p style={{ marginTop: '0.5rem', color: '#666' }}>{ticket.description || 'No description provided'}</p>
+                                    </div>
+
+                                    {ticket.photos && ticket.photos.length > 0 && (
+                                        <div style={{ marginTop: '1.5rem' }}>
+                                            <strong>Photos:</strong>
+                                            <div className="photos-grid">
+                                                {ticket.photos.map(photo => (
+                                                    <div key={photo.id} className="photo-item">
+                                                        <img src={photo.url} alt={photo.name} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="comments-section">
+                                        <h3 style={{ marginBottom: '1rem' }}>Comments & History</h3>
+                                        {ticket.comments && ticket.comments.map(comment => (
+                                            <div key={comment.id} className={`comment ${comment.isSystem ? 'system-comment' : ''}`}>
+                                                <div className="comment-header">
+                                                    <strong>{comment.author}</strong>
+                                                    <span>{new Date(comment.timestamp).toLocaleString()}</span>
+                                                </div>
+                                                <div className="comment-body">{comment.text}</div>
+                                            </div>
+                                        ))}
+                                        {(!ticket.comments || ticket.comments.length === 0) && (
+                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No comments yet</p>
+                                        )}
+                                        
+                                        <div style={{ marginTop: '1.5rem' }}>
+                                            <div className="form-row">
+                                                <div className="form-group">
+                                                    <label>Your Name</label>
+                                                    <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
+                                                        {data.people.map(person => (
+                                                            <option key={person} value={person}>{person}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <textarea
+                                                    value={newComment}
+                                                    onChange={(e) => setNewComment(e.target.value)}
+                                                    placeholder="Add a comment..."
+                                                />
+                                            </div>
+                                            <button className="btn btn-primary" onClick={handleAddComment}>
+                                                Add Comment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="form-group">
+                                        <label>Title *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Description</label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Type *</label>
+                                            <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                                {data.ticketTypes.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Status *</label>
+                                            <select value={formData.status} onChange={(e) => {
+                                                const newStatus = e.target.value;
+                                                setFormData({
+                                                    ...formData,
+                                                    status: newStatus,
+                                                    closedAt: newStatus === 'closed' ? new Date().toISOString() : formData.closedAt
+                                                });
+                                            }}>
+                                                <option value="open">Open</option>
+                                                <option value="in-progress">In Progress</option>
+                                                <option value="waiting">Waiting</option>
+                                                <option value="blocking">Blocking</option>
+                                                <option value="closed">Closed</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Priority *</label>
+                                            <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                                <option value="low">Low</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="high">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {formData.status === 'closed' && (
+                                        <div className="form-group">
+                                            <label>Closed By</label>
+                                            <select value={formData.closer || data.people[0]} onChange={(e) => setFormData({...formData, closer: e.target.value})}>
+                                                {data.people.map(person => (
+                                                    <option key={person} value={person}>{person}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {formData.status === 'waiting' && (
+                                        <div className="form-group">
+                                            <label>Waiting For (select tickets):</label>
+                                            <div className="multi-select-container">
+                                                {availableTickets.map(t => (
+                                                    <label key={t.id} className="multi-select-item">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={blockedBySelected.includes(t.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setBlockedBySelected([...blockedBySelected, t.id]);
+                                                                } else {
+                                                                    setBlockedBySelected(blockedBySelected.filter(id => id !== t.id));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <span>#{t.id}: {t.title}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {formData.status === 'blocking' && (
+                                        <div className="form-group">
+                                            <label>This ticket is blocking (select tickets):</label>
+                                            <div className="multi-select-container">
+                                                {availableTickets.map(t => (
+                                                    <label key={t.id} className="multi-select-item">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isBlockingSelected.includes(t.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setIsBlockingSelected([...isBlockingSelected, t.id]);
+                                                                } else {
+                                                                    setIsBlockingSelected(isBlockingSelected.filter(id => id !== t.id));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <span>#{t.id}: {t.title}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="form-group">
+                                        <label>Estimated Cost</label>
+                                        <input
+                                            type="text"
+                                            value={formData.estimatedCost || ''}
+                                            onChange={(e) => setFormData({...formData, estimatedCost: e.target.value})}
+                                            placeholder="$0.00"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Add Photos</label>
+                                        <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
+                                        {formData.photos && formData.photos.length > 0 && (
+                                            <div className="photos-grid">
+                                                {formData.photos.map(photo => (
+                                                    <div key={photo.id} className="photo-item">
+                                                        <img src={photo.url} alt={photo.name} />
+                                                        <button className="delete-photo" onClick={() => deletePhoto(photo.id)}>×</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            {!editing ? (
+                                <>
+                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                        Edit Ticket
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setFormData(ticket);
+                                        setBlockedBySelected(ticket.blockedBy || []);
+                                        setIsBlockingSelected(ticket.isBlocking || []);
+                                        setEditing(false);
+                                    }}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSave}>
+                                        Save Changes
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function AddInventoryModal({ onClose, onSave, data }) {
+            const [formData, setFormData] = useState({
+                name: '',
+                type: data.types[0],
+                make: data.makes[0],
+                model: '',
+                room: data.rooms[0],
+                serialNumber: '',
+                purchaseDate: '',
+                warrantyExpires: ''
+            });
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Add Inventory Item</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Item Name *</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="e.g., Kitchen Refrigerator"
+                                />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Type *</label>
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {data.types.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Make *</label>
+                                    <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
+                                        {data.makes.map(make => (
+                                            <option key={make} value={make}>{make}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Model</label>
+                                    <input
+                                        type="text"
+                                        value={formData.model}
+                                        onChange={(e) => setFormData({...formData, model: e.target.value})}
+                                        placeholder="Model number"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Room *</label>
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {data.rooms.map(room => (
+                                            <option key={room} value={room}>{room}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Serial Number</label>
+                                    <input
+                                        type="text"
+                                        value={formData.serialNumber}
+                                        onChange={(e) => setFormData({...formData, serialNumber: e.target.value})}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Purchase Date</label>
+                                    <input
+                                        type="date"
+                                        value={formData.purchaseDate}
+                                        onChange={(e) => setFormData({...formData, purchaseDate: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Warranty Expires</label>
+                                <input
+                                    type="date"
+                                    value={formData.warrantyExpires}
+                                    onChange={(e) => setFormData({...formData, warrantyExpires: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => formData.name && onSave(formData)}
+                                disabled={!formData.name}
+                            >
+                                Add Item
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) {
+            const [editing, setEditing] = useState(false);
+            const [formData, setFormData] = useState(item);
+            const [newNote, setNewNote] = useState('');
+
+            const relatedTickets = tickets.filter(t => parseInt(t.inventoryItemId) === item.id);
+            const openTickets = relatedTickets.filter(t => t.status !== 'closed');
+
+            const handleManualsUpload = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newFile = {
+                            id: Date.now() + Math.random(),
+                            name: file.name,
+                            url: e.target.result,
+                            uploadedAt: new Date().toISOString()
+                        };
+                        setFormData(prev => ({
+                            ...prev,
+                            manuals: [...(prev.manuals || []), newFile]
+                        }));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const handleReceiptsUpload = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newFile = {
+                            id: Date.now() + Math.random(),
+                            name: file.name,
+                            url: e.target.result,
+                            uploadedAt: new Date().toISOString()
+                        };
+                        setFormData(prev => ({
+                            ...prev,
+                            receipts: [...(prev.receipts || []), newFile]
+                        }));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const deleteFile = (type, fileId) => {
+                setFormData(prev => ({
+                    ...prev,
+                    [type]: prev[type].filter(f => f.id !== fileId)
+                }));
+            };
+
+            const handleSave = () => {
+                onUpdate(item.id, formData);
+                setEditing(false);
+            };
+
+            const addNote = () => {
+                if (newNote.trim()) {
+                    const note = {
+                        id: Date.now(),
+                        text: newNote,
+                        createdAt: new Date().toISOString()
+                    };
+                    setFormData(prev => ({
+                        ...prev,
+                        notes: [...(prev.notes || []), note]
+                    }));
+                    setNewNote('');
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>{item.name}</h2>
+                            <button className="close-btn" onClick={onClose}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            {!editing ? (
+                                <div>
+                                    <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+                                        <div><strong>Type:</strong> {item.type}</div>
+                                        <div><strong>Make:</strong> {item.make}</div>
+                                        <div><strong>Model:</strong> {item.model || 'N/A'}</div>
+                                        <div><strong>Room:</strong> {item.room}</div>
+                                        {item.serialNumber && <div><strong>Serial Number:</strong> {item.serialNumber}</div>}
+                                        {item.purchaseDate && (
+                                            <div><strong>Purchase Date:</strong> {new Date(item.purchaseDate).toLocaleDateString()}</div>
+                                        )}
+                                        {item.warrantyExpires && (
+                                            <div><strong>Warranty Expires:</strong> {new Date(item.warrantyExpires).toLocaleDateString()}</div>
+                                        )}
+                                    </div>
+
+                                    <h3 style={{ marginBottom: '1rem' }}>Manuals & Documents</h3>
+                                    {item.manuals && item.manuals.length > 0 ? (
+                                        <div className="file-list">
+                                            {item.manuals.map(manual => (
+                                                <div key={manual.id} className="file-item">
+                                                    <span>📄 {manual.name}</span>
+                                                    <a href={manual.url} download={manual.name} className="btn btn-secondary" style={{ padding: '0.25rem 0.75rem', textDecoration: 'none' }}>
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>No manuals uploaded</p>
+                                    )}
+
+                                    <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Receipts</h3>
+                                    {item.receipts && item.receipts.length > 0 ? (
+                                        <div className="file-list">
+                                            {item.receipts.map(receipt => (
+                                                <div key={receipt.id} className="file-item">
+                                                    <span>🧾 {receipt.name}</span>
+                                                    <a href={receipt.url} download={receipt.name} className="btn btn-secondary" style={{ padding: '0.25rem 0.75rem', textDecoration: 'none' }}>
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>No receipts uploaded</p>
+                                    )}
+
+                                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Related Tickets</h3>
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca', marginRight: '0.5rem' }}>
+                                            {openTickets.length} Open
+                                        </span>
+                                        <span className="badge" style={{ background: '#f0f0f0', color: '#666' }}>
+                                            {relatedTickets.length - openTickets.length} Closed
+                                        </span>
+                                    </div>
+                                    {relatedTickets.length > 0 ? (
+                                        <div className="ticket-list">
+                                            {relatedTickets.map(ticket => (
+                                                <div
+                                                    key={ticket.id}
+                                                    className={`ticket-card priority-${ticket.priority}`}
+                                                    onClick={() => onViewTicket(ticket)}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
+                                                    <div className="ticket-title">{ticket.title}</div>
+                                                    <div className="ticket-meta">
+                                                        <span className="badge badge-status">{ticket.status}</span>
+                                                        <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets for this item</p>
+                                    )}
+
+                                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Notes</h3>
+                                    {item.notes && item.notes.length > 0 ? (
+                                        <div>
+                                            {item.notes.map(note => (
+                                                <div key={note.id} className="comment">
+                                                    <div className="comment-header">
+                                                        <span>{new Date(note.createdAt).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="comment-body">{note.text}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>No notes yet</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="form-group">
+                                        <label>Item Name *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Model</label>
+                                            <input
+                                                type="text"
+                                                value={formData.model}
+                                                onChange={(e) => setFormData({...formData, model: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Serial Number</label>
+                                            <input
+                                                type="text"
+                                                value={formData.serialNumber}
+                                                onChange={(e) => setFormData({...formData, serialNumber: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Purchase Date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.purchaseDate}
+                                                onChange={(e) => setFormData({...formData, purchaseDate: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Warranty Expires</label>
+                                            <input
+                                                type="date"
+                                                value={formData.warrantyExpires}
+                                                onChange={(e) => setFormData({...formData, warrantyExpires: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Upload Manuals/Documents</label>
+                                        <input type="file" multiple onChange={handleManualsUpload} />
+                                        {formData.manuals && formData.manuals.length > 0 && (
+                                            <div className="file-list">
+                                                {formData.manuals.map(manual => (
+                                                    <div key={manual.id} className="file-item">
+                                                        <span>📄 {manual.name}</span>
+                                                        <button
+                                                            className="btn btn-secondary"
+                                                            style={{ padding: '0.25rem 0.75rem' }}
+                                                            onClick={() => deleteFile('manuals', manual.id)}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Upload Receipts</label>
+                                        <input type="file" multiple onChange={handleReceiptsUpload} />
+                                        {formData.receipts && formData.receipts.length > 0 && (
+                                            <div className="file-list">
+                                                {formData.receipts.map(receipt => (
+                                                    <div key={receipt.id} className="file-item">
+                                                        <span>🧾 {receipt.name}</span>
+                                                        <button
+                                                            className="btn btn-secondary"
+                                                            style={{ padding: '0.25rem 0.75rem' }}
+                                                            onClick={() => deleteFile('receipts', receipt.id)}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Add Note</label>
+                                        <textarea
+                                            value={newNote}
+                                            onChange={(e) => setNewNote(e.target.value)}
+                                            placeholder="Add a note about this item..."
+                                        />
+                                        <button
+                                            className="btn btn-secondary"
+                                            style={{ marginTop: '0.5rem' }}
+                                            onClick={addNote}
+                                        >
+                                            Add Note
+                                        </button>
+                                    </div>
+                                    {formData.notes && formData.notes.length > 0 && (
+                                        <div style={{ marginTop: '1rem' }}>
+                                            {formData.notes.map(note => (
+                                                <div key={note.id} className="comment">
+                                                    <div className="comment-header">
+                                                        <span>{new Date(note.createdAt).toLocaleString()}</span>
+                                                        <button
+                                                            className="close-btn"
+                                                            onClick={() => setFormData(prev => ({
+                                                                ...prev,
+                                                                notes: prev.notes.filter(n => n.id !== note.id)
+                                                            }))}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                    <div className="comment-body">{note.text}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            {!editing ? (
+                                <>
+                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                        Edit Item
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setFormData(item);
+                                        setEditing(false);
+                                    }}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSave}>
+                                        Save Changes
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
