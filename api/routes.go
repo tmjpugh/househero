@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/handlers"
@@ -10,12 +12,17 @@ import (
 func SetupRoutes(db *database.DB) *mux.Router {
 	router := mux.NewRouter()
 
-	router.Use(middleware.AuthMiddleware)
-
 	homeHandler := handlers.NewHomeHandler(db)
 	ticketHandler := handlers.NewTicketHandler(db)
 	inventoryHandler := handlers.NewInventoryHandler(db)
 
+	// Serve static files (index.html and other static assets)
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "/app/index.html")
+	}).Methods("GET")
+
+	// API routes (no auth middleware for now, add later if needed)
+	
 	// Home routes
 	router.HandleFunc("/api/homes", homeHandler.GetHomes).Methods("GET")
 	router.HandleFunc("/api/homes/{id}", homeHandler.GetHome).Methods("GET")
