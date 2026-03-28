@@ -72,6 +72,7 @@ func (h *TicketHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 		&ticket.InventoryItemID, &ticket.InventoryItem, &ticket.EstimatedCost,
 		&ticket.Closer, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ClosedAt,
 	)
+
 	if err != nil {
 		http.Error(w, "Ticket not found", http.StatusNotFound)
 		return

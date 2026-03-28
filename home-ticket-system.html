@@ -2276,49 +2276,244 @@ function AddHomeModal({ onClose, onSave }) {
         </div>
     );
 }
-        function AddTicketModal({ onClose, onSave, data, inventory }) {
-            const [formData, setFormData] = useState({
-                title: '',
-                description: '',
-                type: data.ticketTypes[0] || 'Repair Request',
-                priority: 'medium',
-                requester: data.people[0] || 'Self',
-                room: data.rooms[0] || 'Kitchen',
-                inventory_item_id: '',
-                estimated_cost: ''
-            });
+function AddTicketModal({ onClose, onSave, data, inventory }) {
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        type: data.ticketTypes[0] || 'Repair Request',
+        priority: 'medium',
+        requester: data.people[0] || 'Self',
+        room: data.rooms[0] || 'Kitchen',
+        inventory_item_id: '',  // Keep as empty string, will convert to int
+        estimated_cost: ''
+    });
 
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>New Ticket</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>New Ticket</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    <div className="form-group">
+                        <label>Title *</label>
+                        <input
+                            type="text"
+                            value={formData.title}
+                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                            placeholder="Brief description"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Description</label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Type</label>
+                            <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                {data.ticketTypes.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="modal-body">
+                        <div className="form-group">
+                            <label>Priority</label>
+                            <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Requester</label>
+                            <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
+                                {data.people.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Room</label>
+                            <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                {data.rooms.map(r => (
+                                    <option key={r} value={r}>{r}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Inventory Item (optional)</label>
+                            <select 
+                                value={formData.inventory_item_id} 
+                                onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
+                            >
+                                <option value="">-- Select Item --</option>
+                                {inventory && inventory.length > 0 ? (
+                                    inventory.map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name} ({item.room})
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option disabled>No inventory items</option>
+                                )}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Estimated Cost (optional)</label>
+                            <input
+                                type="text"
+                                value={formData.estimated_cost}
+                                onChange={(e) => setFormData({...formData, estimated_cost: e.target.value})}
+                                placeholder="$0.00"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => {
+                            if (formData.title) {
+                                onSave(formData);
+                            }
+                        }}
+                        disabled={!formData.title}
+                    >
+                        Create Ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets }) {
+    const [editing, setEditing] = useState(false);
+    const [formData, setFormData] = useState(ticket);
+    const [newComment, setNewComment] = useState('');
+    const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
+
+    // Get inventory item name if inventory_item_id is set
+    const getInventoryItemName = () => {
+        if (!ticket.inventory_item_id || !inventory) return null;
+        const item = inventory.find(i => i.id === ticket.inventory_item_id);
+        return item ? item.name : null;
+    };
+
+    const handleSave = () => {
+        onUpdate(ticket.id, formData);
+        setEditing(false);
+    };
+
+    const handleAddComment = () => {
+        if (newComment.trim()) {
+            onAddComment(ticket.id, {
+                text: newComment,
+                author: commentAuthor
+            });
+            setNewComment('');
+        }
+    };
+
+    const inventoryItemName = getInventoryItemName();
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Ticket #{ticket.id}</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    {!editing ? (
+                        <div>
+                            <h3>{ticket.title}</h3>
+                            <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                                <span className="badge badge-status" style={{ marginRight: '0.5rem' }}>{ticket.status}</span>
+                                <span className="badge badge-priority">{ticket.priority}</span>
+                            </div>
+                            <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
+                                <div><strong>Type:</strong> {ticket.type}</div>
+                                <div><strong>Requester:</strong> {ticket.requester}</div>
+                                <div><strong>Room:</strong> {ticket.room}</div>
+                                {inventoryItemName && <div><strong>Inventory Item:</strong> {inventoryItemName}</div>}
+                                {ticket.estimated_cost && <div><strong>Cost:</strong> {ticket.estimated_cost}</div>}
+                                <div><strong>Created:</strong> {new Date(ticket.created_at).toLocaleString()}</div>
+                            </div>
+
+                            <div style={{ marginTop: '1.5rem' }}>
+                                <strong>Description:</strong>
+                                <p style={{ marginTop: '0.5rem', color: '#666' }}>{ticket.description || 'N/A'}</p>
+                            </div>
+
+                            <div className="comments-section">
+                                <h3 style={{ marginBottom: '1rem' }}>Comments</h3>
+                                {ticket.comments && ticket.comments.map(comment => (
+                                    <div key={comment.id} className={`comment ${comment.is_system ? 'system-comment' : ''}`}>
+                                        <div className="comment-header">
+                                            <strong>{comment.author}</strong>
+                                            <span>{new Date(comment.timestamp).toLocaleString()}</span>
+                                        </div>
+                                        <div className="comment-body">{comment.text}</div>
+                                    </div>
+                                ))}
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <div className="form-group">
+                                        <label>Your Name</label>
+                                        <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
+                                            {data.people.map(p => (
+                                                <option key={p} value={p}>{p}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <textarea
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder="Add a comment..."
+                                        />
+                                    </div>
+                                    <button className="btn btn-primary" onClick={handleAddComment}>
+                                        Add Comment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
                             <div className="form-group">
-                                <label>Title *</label>
+                                <label>Title</label>
                                 <input
                                     type="text"
                                     value={formData.title}
                                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                    placeholder="Brief description"
                                 />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
                                 <textarea
-                                    value={formData.description}
+                                    value={formData.description || ''}
                                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                                 />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Type</label>
-                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                        {data.ticketTypes.map(t => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
+                                    <label>Status</label>
+                                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                                        <option value="open">Open</option>
+                                        <option value="in-progress">In Progress</option>
+                                        <option value="waiting">Waiting</option>
+                                        <option value="closed">Closed</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
@@ -2332,183 +2527,68 @@ function AddHomeModal({ onClose, onSave }) {
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Requester</label>
-                                    <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
-                                        {data.people.map(p => (
-                                            <option key={p} value={p}>{p}</option>
-                                        ))}
-                                    </select>
+                                    <label>Room</label>
+                                    <input
+                                        type="text"
+                                        value={formData.room}
+                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
+                                    />
                                 </div>
                                 <div className="form-group">
-                                    <label>Room</label>
-                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                        {data.rooms.map(r => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
+                                    <label>Estimated Cost</label>
+                                    <input
+                                        type="text"
+                                        value={formData.estimated_cost || ''}
+                                        onChange={(e) => setFormData({...formData, estimated_cost: e.target.value})}
+                                        placeholder="$0.00"
+                                    />
                                 </div>
                             </div>
+                            <div className="form-group">
+                                <label>Inventory Item (optional)</label>
+                                <select 
+                                    value={formData.inventory_item_id || ''} 
+                                    onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value ? parseInt(e.target.value) : null})}
+                                >
+                                    <option value="">-- Select Item --</option>
+                                    {inventory && inventory.length > 0 ? (
+                                        inventory.map(item => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name} ({item.room})
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option disabled>No inventory items</option>
+                                    )}
+                                </select>
+                            </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => formData.title && onSave(formData)}
-                                disabled={!formData.title}
-                            >
-                                Create
+                    )}
+                </div>
+                <div className="modal-footer">
+                    {!editing ? (
+                        <>
+                            <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                            <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                Edit
                             </button>
-                        </div>
-                    </div>
+                        </>
+                    ) : (
+                        <>
+                            <button className="btn btn-secondary" onClick={() => {
+                                setFormData(ticket);
+                                setEditing(false);
+                            }}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleSave}>
+                                Save
+                            </button>
+                        </>
+                    )}
                 </div>
-            );
-        }
-
-        function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets }) {
-            const [editing, setEditing] = useState(false);
-            const [formData, setFormData] = useState(ticket);
-            const [newComment, setNewComment] = useState('');
-            const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
-
-            const handleSave = () => {
-                onUpdate(ticket.id, formData);
-                setEditing(false);
-            };
-
-            const handleAddComment = () => {
-                if (newComment.trim()) {
-                    onAddComment(ticket.id, {
-                        text: newComment,
-                        author: commentAuthor
-                    });
-                    setNewComment('');
-                }
-            };
-
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>Ticket #{ticket.id}</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            {!editing ? (
-                                <div>
-                                    <h3>{ticket.title}</h3>
-                                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                        <span className="badge badge-status" style={{ marginRight: '0.5rem' }}>{ticket.status}</span>
-                                        <span className="badge badge-priority">{ticket.priority}</span>
-                                    </div>
-                                    <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
-                                        <div><strong>Type:</strong> {ticket.type}</div>
-                                        <div><strong>Requester:</strong> {ticket.requester}</div>
-                                        <div><strong>Room:</strong> {ticket.room}</div>
-                                        {ticket.estimated_cost && <div><strong>Cost:</strong> {ticket.estimated_cost}</div>}
-                                        <div><strong>Created:</strong> {new Date(ticket.created_at).toLocaleString()}</div>
-                                    </div>
-
-                                    <div style={{ marginTop: '1.5rem' }}>
-                                        <strong>Description:</strong>
-                                        <p style={{ marginTop: '0.5rem', color: '#666' }}>{ticket.description || 'N/A'}</p>
-                                    </div>
-
-                                    <div className="comments-section">
-                                        <h3 style={{ marginBottom: '1rem' }}>Comments</h3>
-                                        {ticket.comments && ticket.comments.map(comment => (
-                                            <div key={comment.id} className={`comment ${comment.isSystem ? 'system-comment' : ''}`}>
-                                                <div className="comment-header">
-                                                    <strong>{comment.author}</strong>
-                                                    <span>{new Date(comment.timestamp).toLocaleString()}</span>
-                                                </div>
-                                                <div className="comment-body">{comment.text}</div>
-                                            </div>
-                                        ))}
-                                        <div style={{ marginTop: '1.5rem' }}>
-                                            <div className="form-group">
-                                                <label>Your Name</label>
-                                                <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
-                                                    {data.people.map(p => (
-                                                        <option key={p} value={p}>{p}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="form-group">
-                                                <textarea
-                                                    value={newComment}
-                                                    onChange={(e) => setNewComment(e.target.value)}
-                                                    placeholder="Add a comment..."
-                                                />
-                                            </div>
-                                            <button className="btn btn-primary" onClick={handleAddComment}>
-                                                Add Comment
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <div className="form-group">
-                                        <label>Title</label>
-                                        <input
-                                            type="text"
-                                            value={formData.title}
-                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Description</label>
-                                        <textarea
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Status</label>
-                                            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                                                <option value="open">Open</option>
-                                                <option value="in-progress">In Progress</option>
-                                                <option value="waiting">Waiting</option>
-                                                <option value="closed">Closed</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Priority</label>
-                                            <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
-                                                <option value="low">Low</option>
-                                                <option value="medium">Medium</option>
-                                                <option value="high">High</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="modal-footer">
-                            {!editing ? (
-                                <>
-                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
-                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
-                                        Edit
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button className="btn btn-secondary" onClick={() => {
-                                        setFormData(ticket);
-                                        setEditing(false);
-                                    }}>Cancel</button>
-                                    <button className="btn btn-primary" onClick={handleSave}>
-                                        Save
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        }
+            </div>
+        </div>
+    );
+}
 
         function AddInventoryModal({ onClose, onSave, data }) {
             const [formData, setFormData] = useState({
