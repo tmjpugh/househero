@@ -56,9 +56,9 @@
             font-size: 1.5rem;
             cursor: pointer;
             padding: 0.5rem;
-            display: none;
             min-width: 44px;
             min-height: 44px;
+            order: -1;
         }
 
         /* Main Layout */
@@ -87,6 +87,7 @@
             height: calc(100vh - 60px);
             left: 0;
             top: 60px;
+            width: 250px;
         }
 
         .nav-item {
@@ -510,11 +511,16 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             cursor: pointer;
             transition: all 0.2s;
+            border: 2px solid transparent;
         }
 
         .inventory-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        }
+
+        .inventory-card.has-tickets {
+            border: 2px solid #667eea;
         }
 
         .inventory-header {
@@ -564,6 +570,19 @@
             border-radius: 12px;
             margin-bottom: 1rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .room-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .room-section.has-tickets {
+            border: 2px solid #ef4444;
+            background: #fef2f2;
         }
 
         .room-header {
@@ -571,7 +590,6 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-            cursor: pointer;
         }
 
         .room-header h3 {
@@ -583,6 +601,34 @@
             gap: 1rem;
             font-size: 0.9rem;
             color: #666;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .sort-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .sort-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .sort-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
 
         .photo-preview {
@@ -681,6 +727,13 @@
             border-radius: 12px;
             margin-bottom: 1rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .person-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         .person-header {
@@ -741,42 +794,14 @@
             margin-bottom: 0.5rem;
         }
 
-        .file-upload-section {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: #f5f5f5;
-            border-radius: 8px;
-        }
-
-        .file-upload-section h4 {
-            margin-bottom: 1rem;
-        }
-
-        .file-upload-input {
-            display: none;
-        }
-
-        .file-upload-label {
-            display: block;
-            padding: 0.5rem 1rem;
-            background: #007bff;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        .file-upload-label:hover {
-            background: #0056b3;
+        .people-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .menu-toggle {
-                display: flex;
-            }
-
             .sidebar {
                 position: fixed;
                 left: 0;
@@ -815,6 +840,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .people-grid {
+                grid-template-columns: 1fr;
+            }
+
             .home-selector {
                 grid-template-columns: 1fr;
             }
@@ -838,13 +867,17 @@
                 return new Date(dateString).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    day: 'numeric'
                 });
             } catch (e) {
                 return 'Invalid Date';
             }
+        };
+
+        // Format currency
+        const formatCurrency = (value) => {
+            if (!value) return '$0.00';
+            return `$${parseFloat(value).toFixed(2)}`;
         };
 
         // API Client
@@ -963,6 +996,7 @@ const dbApi = {
             const [selectedPerson, setSelectedPerson] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
+            const [roomSort, setRoomSort] = useState('alpha');
 
             // Load homes on mount
             useEffect(() => {
@@ -1206,7 +1240,7 @@ if (view === 'home-select') {
                     <header className="header">
                         <div className="header-content">
                             <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                                ☰
+                                {sidebarOpen ? '✕' : '☰'}
                             </button>
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
                             <button className="btn btn-secondary" onClick={() => {
@@ -1224,28 +1258,28 @@ if (view === 'home-select') {
                                 <div className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}
                                      onClick={() => {
                                         setView('dashboard');
-                                        setSidebarOpen(false);
+                                        if (window.innerWidth <= 768) setSidebarOpen(false);
                                      }}>
                                     📊 Dashboard
                                 </div>
                                 <div className={`nav-item ${view === 'tickets' ? 'active' : ''}`}
                                      onClick={() => {
                                         setView('tickets');
-                                        setSidebarOpen(false);
+                                        if (window.innerWidth <= 768) setSidebarOpen(false);
                                      }}>
                                     🎫 Tickets
                                 </div>
                                 <div className={`nav-item ${view === 'inventory' ? 'active' : ''}`}
                                      onClick={() => {
                                         setView('inventory');
-                                        setSidebarOpen(false);
+                                        if (window.innerWidth <= 768) setSidebarOpen(false);
                                      }}>
                                     📦 Inventory
                                 </div>
                                 <div className={`nav-item ${view === 'rooms' ? 'active' : ''}`}
                                      onClick={() => {
                                         setView('rooms');
-                                        setSidebarOpen(false);
+                                        if (window.innerWidth <= 768) setSidebarOpen(false);
                                      }}>
                                     🏠 Rooms
                                 </div>
@@ -1253,7 +1287,7 @@ if (view === 'home-select') {
                                      onClick={() => {
                                         setView('people');
                                         setSelectedPerson(null);
-                                        setSidebarOpen(false);
+                                        if (window.innerWidth <= 768) setSidebarOpen(false);
                                      }}>
                                     👤 People
                                 </div>
@@ -1321,6 +1355,7 @@ if (view === 'home-select') {
                             {view === 'inventory' && !loading && (
                                 <InventoryView
                                     inventory={currentInventory}
+                                    tickets={currentTickets}
                                     onNewItem={() => setShowModal('add-inventory')}
                                     onItemClick={(item) => {
                                         setModalData(item);
@@ -1334,6 +1369,8 @@ if (view === 'home-select') {
                                     rooms={data.rooms}
                                     tickets={currentTickets}
                                     inventory={currentInventory}
+                                    sort={roomSort}
+                                    onSortChange={setRoomSort}
                                     onTicketClick={(ticket) => {
                                         setModalData(ticket);
                                         setShowModal('view-ticket');
@@ -1439,6 +1476,7 @@ if (view === 'home-select') {
                             onClose={() => setShowModal(null)}
                             onUpdate={updateInventoryItem}
                             tickets={currentTickets}
+                            data={data}
                             onViewTicket={(ticket) => {
                                 setModalData(ticket);
                                 setShowModal('view-ticket');
@@ -1673,6 +1711,11 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                         <span className="badge badge-priority">
                             {ticket.priority} priority
                         </span>
+                        {ticket.estimated_cost && (
+                            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>
+                                {formatCurrency(ticket.estimated_cost)}
+                            </span>
+                        )}
                         <span style={{ color: '#666', marginLeft: 'auto' }}>
                             {formatDate(ticket.created_at)}
                         </span>
@@ -1684,7 +1727,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-function InventoryView({ inventory, onNewItem, onItemClick }) {
+function InventoryView({ inventory, tickets, onNewItem, onItemClick }) {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -1695,38 +1738,53 @@ function InventoryView({ inventory, onNewItem, onItemClick }) {
             </div>
 
             <div className="inventory-grid">
-                {inventory.map(item => (
-                    <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
-                        <div className="inventory-header">{item.name}</div>
-                        <div className="inventory-icons">
-                            {(item.manuals && item.manuals.length > 0) && (
-                                <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
-                                    <span>📄</span>
-                                    <span className="inventory-icon-count">{item.manuals.length}</span>
+                {inventory.map(item => {
+                    const relatedTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
+                    const openTickets = relatedTickets.filter(t => t.status !== 'closed');
+                    
+                    return (
+                        <div key={item.id} className={`inventory-card ${relatedTickets.length > 0 ? 'has-tickets' : ''}`} onClick={() => onItemClick(item)}>
+                            <div className="inventory-header">{item.name}</div>
+                            <div className="inventory-icons">
+                                {(item.manuals && item.manuals.length > 0) && (
+                                    <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                        <span>📄</span>
+                                        <span className="inventory-icon-count">{item.manuals.length}</span>
+                                    </div>
+                                )}
+                                {(item.receipts && item.receipts.length > 0) && (
+                                    <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                        <span>🧾</span>
+                                        <span className="inventory-icon-count">{item.receipts.length}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {relatedTickets.length > 0 && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca', marginRight: '0.5rem' }}>
+                                        {openTickets.length} Open
+                                    </span>
+                                    <span className="badge" style={{ background: '#f0f0f0', color: '#666' }}>
+                                        {relatedTickets.length - openTickets.length} Closed
+                                    </span>
                                 </div>
                             )}
-                            {(item.receipts && item.receipts.length > 0) && (
-                                <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
-                                    <span>🧾</span>
-                                    <span className="inventory-icon-count">{item.receipts.length}</span>
-                                </div>
-                            )}
+                            <div className="inventory-details">
+                                <div><strong>Type:</strong> {item.type}</div>
+                                <div><strong>Make:</strong> {item.make}</div>
+                                <div><strong>Model:</strong> {item.model || 'N/A'}</div>
+                                <div><strong>Room:</strong> {item.room}</div>
+                                {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
+                                {item.purchase_date && (
+                                    <div><strong>Purchased:</strong> {formatDate(item.purchase_date)}</div>
+                                )}
+                                {item.warranty_expires && (
+                                    <div><strong>Warranty:</strong> {formatDate(item.warranty_expires)}</div>
+                                )}
+                            </div>
                         </div>
-                        <div className="inventory-details">
-                            <div><strong>Type:</strong> {item.type}</div>
-                            <div><strong>Make:</strong> {item.make}</div>
-                            <div><strong>Model:</strong> {item.model || 'N/A'}</div>
-                            <div><strong>Room:</strong> {item.room}</div>
-                            {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
-                            {item.purchase_date && (
-                                <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
-                            )}
-                            {item.warranty_expires && (
-                                <div><strong>Warranty:</strong> {new Date(item.warranty_expires).toLocaleDateString()}</div>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
                 {inventory.length === 0 && (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
                         No inventory items yet. Add your first item!
@@ -1737,65 +1795,112 @@ function InventoryView({ inventory, onNewItem, onItemClick }) {
     );
 }
 
+function RoomsView({ rooms, tickets, inventory, sort, onSortChange, onTicketClick, onItemClick }) {
+    const getSortedRooms = () => {
+        const roomData = rooms.map(room => ({
+            name: room,
+            tickets: tickets.filter(t => t.room === room),
+            inventory: inventory.filter(i => i.room === room)
+        }));
 
-        function RoomsView({ rooms, tickets, inventory, onTicketClick, onItemClick }) {
-            const [expandedRoom, setExpandedRoom] = useState(null);
+        switch(sort) {
+            case 'alpha':
+                return roomData.sort((a, b) => a.name.localeCompare(b.name));
+            case 'tickets-desc':
+                return roomData.sort((a, b) => b.tickets.length - a.tickets.length);
+            case 'tickets-asc':
+                return roomData.sort((a, b) => a.tickets.length - b.tickets.length);
+            case 'inventory-desc':
+                return roomData.sort((a, b) => b.inventory.length - a.inventory.length);
+            case 'inventory-asc':
+                return roomData.sort((a, b) => a.inventory.length - b.inventory.length);
+            default:
+                return roomData;
+        }
+    };
 
-            return (
-                <div>
-                    <h2 style={{ marginBottom: '1.5rem' }}>Rooms</h2>
-                    {rooms.map(room => {
-                        const roomTickets = tickets.filter(t => t.room === room);
-                        const roomInventory = inventory.filter(i => i.room === room);
-                        const openTickets = roomTickets.filter(t => t.status !== 'closed');
+    const sortedRooms = getSortedRooms();
 
-                        return (
-                            <div key={room} className="room-section">
-                                <div className="room-header" onClick={() => setExpandedRoom(expandedRoom === room ? null : room)}>
-                                    <h3>{room}</h3>
-                                    <div className="room-stats">
-                                        <span>{openTickets.length} open</span>
-                                        <span>{roomInventory.length} items</span>
-                                        <span>{expandedRoom === room ? '▲' : '▼'}</span>
-                                    </div>
-                                </div>
-                                {expandedRoom === room && (
-                                    <div>
-                                        <h4 style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>Tickets</h4>
-                                        {roomTickets.length > 0 ? (
-                                            <div className="ticket-list">
-                                                {roomTickets.map(ticket => (
-                                                    <TicketCard key={ticket.id} ticket={ticket} onClick={() => onTicketClick(ticket)} />
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No tickets for this room</p>
-                                        )}
-                                        
-                                        <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>Inventory</h4>
-                                        {roomInventory.length > 0 ? (
-                                            <div className="inventory-grid">
-                                                {roomInventory.map(item => (
-                                                    <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
-                                                        <div className="inventory-header">{item.name}</div>
-                                                        <div className="inventory-details">
-                                                            <div><strong>Type:</strong> {item.type}</div>
-                                                            <div><strong>Make:</strong> {item.make}</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p style={{ color: '#666', fontSize: '0.9rem' }}>No inventory items</p>
-                                        )}
-                                    </div>
+    return (
+        <div>
+            <h2 style={{ marginBottom: '1.5rem' }}>Rooms</h2>
+            
+            <div className="sort-controls">
+                <button className={`sort-btn ${sort === 'alpha' ? 'active' : ''}`} onClick={() => onSortChange('alpha')}>
+                    Alphabetical
+                </button>
+                <button className={`sort-btn ${sort === 'tickets-desc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-desc')}>
+                    Tickets (High to Low)
+                </button>
+                <button className={`sort-btn ${sort === 'tickets-asc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-asc')}>
+                    Tickets (Low to High)
+                </button>
+                <button className={`sort-btn ${sort === 'inventory-desc' ? 'active' : ''}`} onClick={() => onSortChange('inventory-desc')}>
+                    Inventory (High to Low)
+                </button>
+                <button className={`sort-btn ${sort === 'inventory-asc' ? 'active' : ''}`} onClick={() => onSortChange('inventory-asc')}>
+                    Inventory (Low to High)
+                </button>
+            </div>
+
+            <div className="inventory-grid">
+                {sortedRooms.map(room => {
+                    const openTickets = room.tickets.filter(t => t.status !== 'closed');
+                    const hasTickets = room.tickets.length > 0;
+
+                    return (
+                        <div key={room.name} className={`room-section ${hasTickets ? 'has-tickets' : ''}`}>
+                            <div className="room-header">
+                                <h3>{room.name}</h3>
+                            </div>
+                            <div className="room-stats">
+                                {hasTickets && (
+                                    <>
+                                        <span className="badge" style={{ background: '#fee2e2', color: '#991b1b', marginRight: '0.5rem' }}>
+                                            {openTickets.length} Open Tickets
+                                        </span>
+                                        <span className="badge" style={{ background: '#f0f0f0', color: '#666' }}>
+                                            {room.tickets.length - openTickets.length} Closed
+                                        </span>
+                                    </>
+                                )}
+                                {room.inventory.length > 0 && (
+                                    <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca' }}>
+                                        {room.inventory.length} Items
+                                    </span>
                                 )}
                             </div>
-                        );
-                    })}
-                </div>
-            );
-        }
+
+                            {room.inventory.length > 0 && (
+                                <div style={{ marginTop: '1rem' }}>
+                                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
+                                        <strong>Inventory:</strong>
+                                    </p>
+                                    {room.inventory.map(item => (
+                                        <div 
+                                            key={item.id}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: '#f5f5f5',
+                                                borderRadius: '4px',
+                                                marginBottom: '0.25rem',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem'
+                                            }}
+                                            onClick={() => onItemClick(item)}
+                                        >
+                                            {item.name} ({item.type})
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
 
         function PeopleView({ people, tickets, selectedPerson, onSelectPerson, onTicketClick }) {
             if (selectedPerson) {
@@ -1838,257 +1943,314 @@ function InventoryView({ inventory, onNewItem, onItemClick }) {
             return (
                 <div>
                     <h2 style={{ marginBottom: '1.5rem' }}>People</h2>
-                    {people.map(person => {
-                        const personTickets = tickets.filter(t => t.requester === person);
-                        const openTickets = personTickets.filter(t => t.status !== 'closed');
+                    <div className="people-grid">
+                        {people.map(person => {
+                            const personTickets = tickets.filter(t => t.requester === person);
+                            const openTickets = personTickets.filter(t => t.status !== 'closed');
 
-                        return (
-                            <div key={person} className="person-section" onClick={() => onSelectPerson(person)} style={{ cursor: 'pointer' }}>
-                                <div className="person-header">{person}</div>
-                                <div className="person-stats">
-                                    <span>👤</span>
-                                    <span>{openTickets.length} open</span>
-                                    <span>{personTickets.length - openTickets.length} closed</span>
+                            return (
+                                <div key={person} className="person-section" onClick={() => onSelectPerson(person)}>
+                                    <div className="person-header">{person}</div>
+                                    <div className="person-stats">
+                                        <span>👤</span>
+                                        <span>{openTickets.length} open</span>
+                                        <span>{personTickets.length - openTickets.length} closed</span>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
-            const [newPerson, setNewPerson] = useState('');
-            const [newRoom, setNewRoom] = useState('');
-            const [newType, setNewType] = useState('');
-            const [newTicketType, setNewTicketType] = useState('');
-            const [newMake, setNewMake] = useState('');
-            const [newModel, setNewModel] = useState('');
-            const [newPassword, setNewPassword] = useState('');
-
-            const addItem = (field, value, setter) => {
-                if (value.trim()) {
-                    setData(prev => ({
-                        ...prev,
-                        [field]: [...prev[field], value.trim()]
-                    }));
-                    setter('');
-                }
-            };
-
-            const removeItem = (field, value) => {
-                setData(prev => ({
-                    ...prev,
-                    [field]: prev[field].filter(item => item !== value)
-                }));
-            };
-
-            const updateThreshold = (priority, level, value) => {
-                setData(prev => ({
-                    ...prev,
-                    agingThresholds: {
-                        ...prev.agingThresholds,
-                        [priority]: {
-                            ...prev.agingThresholds[priority],
-                            [level]: parseInt(value)
-                        }
-                    }
-                }));
-            };
-
-            const handlePhotoUpload = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        onUpdateHome({ photo: e.target.result });
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
-            const updatePassword = () => {
-                if (newPassword.trim()) {
-                    setData(prev => ({
-                        ...prev,
-                        settingsPassword: newPassword.trim()
-                    }));
-                    setNewPassword('');
-                    alert('Password updated!');
-                }
-            };
-
-            const exportData = () => {
-                const dataStr = JSON.stringify(data, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `home-maintenance-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-            };
-
-            const importData = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const imported = JSON.parse(e.target.result);
-                            setData(imported);
-                            alert('Data imported successfully!');
-                        } catch (err) {
-                            alert('Error importing data. Please check the file format.');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
-
-            return (
-                <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
-                        <h2>Settings</h2>
-                        <button className="btn btn-secondary" onClick={onLogout}>
-                            Logout
-                        </button>
-                    </div>
-
-                    <div className="room-section">
-                        <h3 style={{ marginBottom: '1rem' }}>Security</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <input
-                                type="password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="New password..."
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '200px' }}
-                            />
-                            <button className="btn btn-primary" onClick={updatePassword}>
-                                Update Password
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="room-section">
-                        <h3 style={{ marginBottom: '1rem' }}>Home Photo</h3>
-                        {currentHome?.photo && (
-                            <img src={currentHome.photo} alt="Home" className="photo-preview" />
-                        )}
-                        <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ marginTop: '1rem' }} />
-                    </div>
-
-                    <div className="room-section" style={{ marginTop: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>People</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <input
-                                type="text"
-                                value={newPerson}
-                                onChange={(e) => setNewPerson(e.target.value)}
-                                placeholder="Add person..."
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
-                            />
-                            <button className="btn btn-primary" onClick={() => addItem('people', newPerson, setNewPerson)}>
-                                Add
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {data.people.map(person => (
-                                <span key={person} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
-                                      onClick={() => removeItem('people', person)}>
-                                    {person} ×
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="room-section" style={{ marginTop: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Rooms</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <input
-                                type="text"
-                                value={newRoom}
-                                onChange={(e) => setNewRoom(e.target.value)}
-                                placeholder="Add room..."
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
-                            />
-                            <button className="btn btn-primary" onClick={() => addItem('rooms', newRoom, setNewRoom)}>
-                                Add
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {data.rooms.map(room => (
-                                <span key={room} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
-                                      onClick={() => removeItem('rooms', room)}>
-                                    {room} ×
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="room-section" style={{ marginTop: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Ticket Types</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <input
-                                type="text"
-                                value={newTicketType}
-                                onChange={(e) => setNewTicketType(e.target.value)}
-                                placeholder="Add type..."
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
-                            />
-                            <button className="btn btn-primary" onClick={() => addItem('ticketTypes', newTicketType, setNewTicketType)}>
-                                Add
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {data.ticketTypes.map(type => (
-                                <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
-                                      onClick={() => removeItem('ticketTypes', type)}>
-                                    {type} ×
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="room-section" style={{ marginTop: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Makes</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <input
-                                type="text"
-                                value={newMake}
-                                onChange={(e) => setNewMake(e.target.value)}
-                                placeholder="Add make..."
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
-                            />
-                            <button className="btn btn-primary" onClick={() => addItem('makes', newMake, setNewMake)}>
-                                Add
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {data.makes.map(make => (
-                                <span key={make} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer' }}
-                                      onClick={() => removeItem('makes', make)}>
-                                    {make} ×
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="room-section" style={{ marginTop: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Data Management</h3>
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            <button className="btn btn-primary" onClick={exportData}>
-                                Export Data
-                            </button>
-                            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                                Import Data
-                                <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }} />
-                            </label>
-                        </div>
+                            );
+                        })}
                     </div>
                 </div>
             );
         }
+
+function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
+    const [newPerson, setNewPerson] = useState('');
+    const [newRoom, setNewRoom] = useState('');
+    const [newType, setNewType] = useState('');
+    const [newTicketType, setNewTicketType] = useState('');
+    const [newMake, setNewMake] = useState('');
+    const [newModel, setNewModel] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const addItem = (field, value, setter) => {
+        if (value.trim()) {
+            const updatedArray = [...(data[field] || []), value.trim()];
+            setData(prev => ({
+                ...prev,
+                [field]: updatedArray
+            }));
+            setter('');
+            setSuccess(`${field} updated successfully`);
+            setTimeout(() => setSuccess(''), 3000);
+        }
+    };
+
+    const removeItem = (field, value) => {
+        const updatedArray = (data[field] || []).filter(item => item !== value);
+        setData(prev => ({
+            ...prev,
+            [field]: updatedArray
+        }));
+        setSuccess(`${field} updated successfully`);
+        setTimeout(() => setSuccess(''), 3000);
+    };
+
+    const updateThreshold = (priority, level, value) => {
+        setData(prev => ({
+            ...prev,
+            agingThresholds: {
+                ...prev.agingThresholds,
+                [priority]: {
+                    ...prev.agingThresholds[priority],
+                    [level]: parseInt(value)
+                }
+            }
+        }));
+    };
+
+    const handlePhotoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                onUpdateHome({ photo: e.target.result });
+                setSuccess('Photo updated successfully');
+                setTimeout(() => setSuccess(''), 3000);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const updatePassword = async () => {
+        if (newPassword.trim()) {
+            try {
+                setLoading(true);
+                setError('');
+                setData(prev => ({
+                    ...prev,
+                    settingsPassword: newPassword.trim()
+                }));
+                setNewPassword('');
+                setSuccess('Password updated successfully!');
+                setTimeout(() => setSuccess(''), 3000);
+            } catch (err) {
+                setError('Failed to update password');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const exportData = () => {
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `home-maintenance-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        setSuccess('Data exported successfully');
+        setTimeout(() => setSuccess(''), 3000);
+    };
+
+    const importData = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    setData(imported);
+                    setSuccess('Data imported successfully!');
+                    setTimeout(() => setSuccess(''), 3000);
+                } catch (err) {
+                    setError('Error importing data. Please check the file format.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+                <h2>Settings</h2>
+                <button className="btn btn-secondary" onClick={onLogout}>
+                    Logout
+                </button>
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+            {success && <div style={{ background: '#dcfce7', color: '#166534', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{success}</div>}
+
+            <div className="room-section">
+                <h3 style={{ marginBottom: '1rem' }}>Security</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="New password..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '200px' }}
+                    />
+                    <button className="btn btn-primary" onClick={updatePassword} disabled={loading}>
+                        Update Password
+                    </button>
+                </div>
+            </div>
+
+            <div className="room-section">
+                <h3 style={{ marginBottom: '1rem' }}>Home Photo</h3>
+                {currentHome?.photo && (
+                    <img src={currentHome.photo} alt="Home" className="photo-preview" />
+                )}
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ marginTop: '1rem' }} />
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>People</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={newPerson}
+                        onChange={(e) => setNewPerson(e.target.value)}
+                        placeholder="Add person..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem('people', newPerson, setNewPerson)}
+                    />
+                    <button className="btn btn-primary" onClick={() => addItem('people', newPerson, setNewPerson)}>
+                        Add
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {(data.people || []).map(person => (
+                        <span key={person} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
+                              onClick={() => removeItem('people', person)}>
+                            {person} ×
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Rooms</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={newRoom}
+                        onChange={(e) => setNewRoom(e.target.value)}
+                        placeholder="Add room..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem('rooms', newRoom, setNewRoom)}
+                    />
+                    <button className="btn btn-primary" onClick={() => addItem('rooms', newRoom, setNewRoom)}>
+                        Add
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {(data.rooms || []).map(room => (
+                        <span key={room} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
+                              onClick={() => removeItem('rooms', room)}>
+                            {room} ×
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Ticket Types</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={newTicketType}
+                        onChange={(e) => setNewTicketType(e.target.value)}
+                        placeholder="Add type..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem('ticketTypes', newTicketType, setNewTicketType)}
+                    />
+                    <button className="btn btn-primary" onClick={() => addItem('ticketTypes', newTicketType, setNewTicketType)}>
+                        Add
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {(data.ticketTypes || []).map(type => (
+                        <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
+                              onClick={() => removeItem('ticketTypes', type)}>
+                            {type} ×
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Makes</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={newMake}
+                        onChange={(e) => setNewMake(e.target.value)}
+                        placeholder="Add make..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem('makes', newMake, setNewMake)}
+                    />
+                    <button className="btn btn-primary" onClick={() => addItem('makes', newMake, setNewMake)}>
+                        Add
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {(data.makes || []).map(make => (
+                        <span key={make} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
+                              onClick={() => removeItem('makes', make)}>
+                            {make} ×
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Types</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={newType}
+                        onChange={(e) => setNewType(e.target.value)}
+                        placeholder="Add type..."
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', minWidth: '150px' }}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem('types', newType, setNewType)}
+                    />
+                    <button className="btn btn-primary" onClick={() => addItem('types', newType, setNewType)}>
+                        Add
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {(data.types || []).map(type => (
+                        <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
+                              onClick={() => removeItem('types', type)}>
+                            {type} ×
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Data Management</h3>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={exportData}>
+                        Export Data
+                    </button>
+                    <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                        Import Data
+                        <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }} />
+                    </label>
+                </div>
+            </div>
+        </div>
+    );
+}
 
         // Modal Components
         function SettingsPasswordModal({ onClose, onAuthenticate, correctPassword }) {
@@ -2369,7 +2531,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Requester</label>
                             <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
-                                {data.people.map(p => (
+                                {(data.people || []).map(p => (
                                     <option key={p} value={p}>{p}</option>
                                 ))}
                             </select>
@@ -2377,7 +2539,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Room</label>
                             <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                {data.rooms.map(r => (
+                                {(data.rooms || []).map(r => (
                                     <option key={r} value={r}>{r}</option>
                                 ))}
                             </select>
@@ -2405,10 +2567,13 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Estimated Cost (optional)</label>
                             <input
-                                type="text"
+                                type="number"
+                                inputMode="decimal"
+                                step="0.01"
+                                min="0"
                                 value={formData.estimated_cost}
                                 onChange={(e) => setFormData({...formData, estimated_cost: e.target.value})}
-                                placeholder="$0.00"
+                                placeholder="0.00"
                             />
                         </div>
                     </div>
@@ -2481,7 +2646,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div><strong>Requester:</strong> {ticket.requester}</div>
                                 <div><strong>Room:</strong> {ticket.room}</div>
                                 {inventoryItemName && <div><strong>Inventory Item:</strong> {inventoryItemName}</div>}
-                                {ticket.estimated_cost && <div><strong>Cost:</strong> {ticket.estimated_cost}</div>}
+                                {ticket.estimated_cost && <div><strong>Cost:</strong> {formatCurrency(ticket.estimated_cost)}</div>}
                                 <div><strong>Created:</strong> {formatDate(ticket.created_at)}</div>
                             </div>
 
@@ -2505,7 +2670,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <div className="form-group">
                                         <label>Your Name</label>
                                         <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
-                                            {data.people.map(p => (
+                                            {(data.people || []).map(p => (
                                                 <option key={p} value={p}>{p}</option>
                                             ))}
                                         </select>
@@ -2544,7 +2709,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div className="form-group">
                                     <label>Requester</label>
                                     <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
-                                        {data.people.map(p => (
+                                        {(data.people || []).map(p => (
                                             <option key={p} value={p}>{p}</option>
                                         ))}
                                     </select>
@@ -2570,21 +2735,24 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 </div>
                                 <div className="form-group">
                                     <label>Room</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {(data.rooms || []).map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Estimated Cost</label>
                                     <input
-                                        type="text"
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.01"
+                                        min="0"
                                         value={formData.estimated_cost || ''}
                                         onChange={(e) => setFormData({...formData, estimated_cost: e.target.value})}
-                                        placeholder="$0.00"
+                                        placeholder="0.00"
                                     />
                                 </div>
                                 <div className="form-group">
@@ -2667,7 +2835,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Type *</label>
                             <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                {data.types.map(t => (
+                                {(data.types || []).map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
@@ -2675,7 +2843,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Make *</label>
                             <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
-                                {data.makes.map(m => (
+                                {(data.makes || []).map(m => (
                                     <option key={m} value={m}>{m}</option>
                                 ))}
                             </select>
@@ -2694,7 +2862,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Room *</label>
                             <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                {data.rooms.map(r => (
+                                {(data.rooms || []).map(r => (
                                     <option key={r} value={r}>{r}</option>
                                 ))}
                             </select>
@@ -2743,7 +2911,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
     );
 }
 
-function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) {
+function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTicket }) {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(item);
 
@@ -2822,19 +2990,19 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) 
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Type</label>
-                                    <input
-                                        type="text"
-                                        value={formData.type}
-                                        onChange={(e) => setFormData({...formData, type: e.target.value})}
-                                    />
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {(data.types || []).map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Make</label>
-                                    <input
-                                        type="text"
-                                        value={formData.make}
-                                        onChange={(e) => setFormData({...formData, make: e.target.value})}
-                                    />
+                                    <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
+                                        {(data.makes || []).map(m => (
+                                            <option key={m} value={m}>{m}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-row">
@@ -2848,11 +3016,11 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) 
                                 </div>
                                 <div className="form-group">
                                     <label>Room</label>
-                                    <input
-                                        type="text"
-                                        value={formData.room}
-                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
-                                    />
+                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                        {(data.rooms || []).map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-row">
@@ -2908,6 +3076,7 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) 
         </div>
     );
 }
+
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
