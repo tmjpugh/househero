@@ -741,6 +741,36 @@
             margin-bottom: 0.5rem;
         }
 
+        .file-upload-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .file-upload-section h4 {
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-input {
+            display: none;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 0.5rem 1rem;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-label:hover {
+            background: #0056b3;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .menu-toggle {
@@ -801,6 +831,22 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // Format date helper function
+        const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return 'Invalid Date';
+            }
+        };
+
         // API Client
 const dbApi = {
     getHomes: async () => {
@@ -823,6 +869,12 @@ const dbApi = {
         const res = await fetch(`/api/tickets?home_id=${homeId}`);
         if (!res.ok) throw new Error('Failed to load tickets');
         return res.json() || [];
+    },
+    
+    getTicket: async (ticketId) => {
+        const res = await fetch(`/api/tickets/${ticketId}`);
+        if (!res.ok) throw new Error('Failed to load ticket');
+        return res.json();
     },
     
     createTicket: async (ticket) => {
@@ -949,7 +1001,7 @@ const dbApi = {
                      setTickets(ticketsData || []);
                 } catch (err) {
                     setError(err.message);
-                    setTickets([]);  // Set to empty array on error
+                    setTickets([]);
                 }
             };
 
@@ -959,7 +1011,7 @@ const dbApi = {
                     setInventory(invData || []);
                 } catch (err) {
                     setError(err.message);
-                    setInventory([]);  // set to empty array on error
+                    setInventory([]);
                 }
             };
 
@@ -968,28 +1020,23 @@ const addHome = async (home) => {
     try {
         setLoading(true);
         setError('');
-        console.log('Sending home data:', home);
         const response = await fetch('/api/homes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(home)
         });
-        console.log('Response status:', response.status);
-        const responseText = await response.text();
-        console.log('Response body:', responseText);
         
         if (!response.ok) {
+            const responseText = await response.text();
             throw new Error(`API error: ${response.status} - ${responseText}`);
         }
         
-        const newHome = JSON.parse(responseText);
-        console.log('Home created:', newHome);
+        const newHome = await response.json();
         setHomes([...homes, newHome]);
         setCurrentHome(newHome.id);
         setView('dashboard');
         setShowModal(null);
     } catch (err) {
-        console.error('Error creating home:', err);
         setError(`Failed to create home: ${err.message}`);
     } finally {
         setLoading(false);
@@ -1030,7 +1077,6 @@ const addHome = async (home) => {
             };
 
             const addComment = (ticketId, comment) => {
-                // Placeholder - comments handled locally for now
                 const updatedTickets = tickets.map(t => {
                     if (t.id === ticketId) {
                         return {
@@ -1088,7 +1134,7 @@ const addHome = async (home) => {
             };
 
             const getTicketAgeColor = (ticket) => {
-                const age = getTicketAge(ticket.createdAt);
+                const age = getTicketAge(ticket.created_at);
                 const thresholds = data.agingThresholds[ticket.priority] || data.agingThresholds.medium;
                 
                 if (age >= thresholds.red) return 'aged-high';
@@ -1144,7 +1190,6 @@ if (view === 'home-select') {
                 setCurrentHome(homeId);
                 setView('dashboard');
             }} onAddHome={() => {
-                console.log('Add home clicked');
                 setShowModal('add-home');
             }} />
             {showModal === 'add-home' && (
@@ -1404,11 +1449,6 @@ if (view === 'home-select') {
             );
         }
 
-        // [ALL YOUR ORIGINAL COMPONENTS BELOW - Unchanged except for data source]
-        // HomeSelector, DashboardView, TicketsView, TicketCard, InventoryView, RoomsView, 
-        // PeopleView, SettingsView, and all Modal components...
-
-
 function HomeSelector({ homes, onSelectHome, onAddHome }) {
     return (
         <div className="app">
@@ -1449,12 +1489,6 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
         </div>
     );
 }
-
-
-
-
-        // PASTE ALL YOUR ORIGINAL COMPONENT FUNCTIONS HERE (DashboardView, TicketsView, etc.)
-        // They remain 100% unchanged from your v1.2 version...
 
         function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
             const recentTickets = tickets.slice(-5).reverse();
@@ -1532,9 +1566,6 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                 </div>
             );
         }
-
-        // [PASTE YOUR TicketsView, TicketCard, InventoryView, RoomsView, PeopleView, SettingsView HERE]
-        // Copy all remaining functions from your v1.2 HTML as-is...
 
         function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
             return (
@@ -1625,7 +1656,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                     e.stopPropagation();
                                     onNavigatePerson && onNavigatePerson(ticket.requester);
                                 }}>{ticket.requester}</span></span>
-                                {ticket.inventoryItem && <span>📦 {ticket.inventoryItem}</span>}
+                                {ticket.inventory_item && <span>📦 {ticket.inventory_item}</span>}
                             </div>
                         </div>
                         <div onClick={(e) => e.stopPropagation()}>
@@ -1643,7 +1674,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                             {ticket.priority} priority
                         </span>
                         <span style={{ color: '#666', marginLeft: 'auto' }}>
-                            {new Date(ticket.createdAt).toLocaleDateString()}
+                            {formatDate(ticket.created_at)}
                         </span>
                     </div>
                     <div onClick={onClick} style={{ cursor: 'pointer', marginTop: '0.5rem', padding: '0.5rem', borderRadius: '4px' }}>
@@ -1688,7 +1719,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                     <div><strong>Room:</strong> {item.room}</div>
                                     {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
                                     {item.purchase_date && (
-                                        <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
+                                        <div><strong>Purchased:</strong> {formatDate(item.purchase_date)}</div>
                                     )}
                                 </div>
                             </div>
@@ -1770,7 +1801,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                 return (
                     <div>
                         <button className="btn btn-secondary" onClick={() => onSelectPerson(null)} style={{ marginBottom: '1.5rem' }}>
-                            ��� Back to People
+                            ← Back to People
                         </button>
                         <div className="person-section">
                             <div className="person-header">{selectedPerson}</div>
@@ -2127,7 +2158,6 @@ function AddHomeModal({ onClose, onSave }) {
     };
 
     const handleSave = () => {
-        // If user info is empty, we need to ask for it
         if (!formData.user_name || !formData.user_email) {
             setShowUserSetup(true);
             return;
@@ -2276,6 +2306,7 @@ function AddHomeModal({ onClose, onSave }) {
         </div>
     );
 }
+
 function AddTicketModal({ onClose, onSave, data, inventory }) {
     const [formData, setFormData] = useState({
         title: '',
@@ -2284,7 +2315,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
         priority: 'medium',
         requester: data.people[0] || 'Self',
         room: data.rooms[0] || 'Kitchen',
-        inventory_item_id: '',  // Keep as empty string, will convert to int
+        inventory_item_id: '',
         estimated_cost: ''
     });
 
@@ -2403,7 +2434,6 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     const [newComment, setNewComment] = useState('');
     const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
 
-    // Get inventory item name if inventory_item_id is set
     const getInventoryItemName = () => {
         if (!ticket.inventory_item_id || !inventory) return null;
         const item = inventory.find(i => i.id === ticket.inventory_item_id);
@@ -2448,7 +2478,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div><strong>Room:</strong> {ticket.room}</div>
                                 {inventoryItemName && <div><strong>Inventory Item:</strong> {inventoryItemName}</div>}
                                 {ticket.estimated_cost && <div><strong>Cost:</strong> {ticket.estimated_cost}</div>}
-                                <div><strong>Created:</strong> {new Date(ticket.created_at).toLocaleString()}</div>
+                                <div><strong>Created:</strong> {formatDate(ticket.created_at)}</div>
                             </div>
 
                             <div style={{ marginTop: '1.5rem' }}>
@@ -2462,7 +2492,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <div key={comment.id} className={`comment ${comment.is_system ? 'system-comment' : ''}`}>
                                         <div className="comment-header">
                                             <strong>{comment.author}</strong>
-                                            <span>{new Date(comment.timestamp).toLocaleString()}</span>
+                                            <span>{formatDate(comment.timestamp)}</span>
                                         </div>
                                         <div className="comment-body">{comment.text}</div>
                                     </div>
@@ -2508,6 +2538,14 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
+                                    <label>Requester</label>
+                                    <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
+                                        {data.people.map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
                                     <label>Status</label>
                                     <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
                                         <option value="open">Open</option>
@@ -2516,6 +2554,8 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                         <option value="closed">Closed</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div className="form-row">
                                 <div className="form-group">
                                     <label>Priority</label>
                                     <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})}>
@@ -2524,8 +2564,6 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                         <option value="high">High</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div className="form-row">
                                 <div className="form-group">
                                     <label>Room</label>
                                     <input
@@ -2534,6 +2572,8 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                         onChange={(e) => setFormData({...formData, room: e.target.value})}
                                     />
                                 </div>
+                            </div>
+                            <div className="form-row">
                                 <div className="form-group">
                                     <label>Estimated Cost</label>
                                     <input
@@ -2543,24 +2583,24 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                         placeholder="$0.00"
                                     />
                                 </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Inventory Item (optional)</label>
-                                <select 
-                                    value={formData.inventory_item_id || ''} 
-                                    onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value ? parseInt(e.target.value) : null})}
-                                >
-                                    <option value="">-- Select Item --</option>
-                                    {inventory && inventory.length > 0 ? (
-                                        inventory.map(item => (
-                                            <option key={item.id} value={item.id}>
-                                                {item.name} ({item.room})
-                                            </option>
-                                        ))
-                                    ) : (
-                                        <option disabled>No inventory items</option>
-                                    )}
-                                </select>
+                                <div className="form-group">
+                                    <label>Inventory Item (optional)</label>
+                                    <select 
+                                        value={formData.inventory_item_id || ''} 
+                                        onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value ? parseInt(e.target.value) : null})}
+                                    >
+                                        <option value="">-- Select Item --</option>
+                                        {inventory && inventory.length > 0 ? (
+                                            inventory.map(item => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.name} ({item.room})
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <option disabled>No inventory items</option>
+                                        )}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -2672,7 +2712,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
             const [editing, setEditing] = useState(false);
             const [formData, setFormData] = useState(item);
 
-            const relatedTickets = tickets.filter(t => parseInt(t.inventoryItemId) === item.id);
+            const relatedTickets = tickets.filter(t => parseInt(t.inventory_item_id) === item.id);
 
             const handleSave = () => {
                 onUpdate(item.id, formData);
@@ -2697,10 +2737,10 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
 
 {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
 {item.purchase_date && (
-    <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
+    <div><strong>Purchased:</strong> {formatDate(item.purchase_date)}</div>
 )}
 
-                                        {item.warranty_expires && <div><strong>Warranty:</strong> {new Date(item.warranty_expires).toLocaleDateString()}</div>}
+                                        {item.warranty_expires && <div><strong>Warranty:</strong> {formatDate(item.warranty_expires)}</div>}
                                     </div>
 
                                     <h3 style={{ marginBottom: '1rem' }}>Related Tickets</h3>
