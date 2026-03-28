@@ -970,6 +970,16 @@ const dbApi = {
         });
         if (!res.ok) throw new Error('Failed to update settings');
         return res.json();
+    },
+
+    updateHome: async (id, updates) => {
+        const res = await fetch(`/api/homes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update home');
+        return res.json();
     }
 };
 
@@ -1035,8 +1045,16 @@ const dbApi = {
                         dbApi.getSettings().catch(() => ({ settings_password: '1234' }))
                     ]);
                     setHomes(homesData);
-                    if (settingsData && settingsData.settings_password) {
-                        setData(prev => ({ ...prev, settingsPassword: settingsData.settings_password }));
+                    if (settingsData) {
+                        setData(prev => ({
+                            ...prev,
+                            settingsPassword: settingsData.settings_password || prev.settingsPassword,
+                            people:      settingsData.people      && settingsData.people.length      ? settingsData.people      : prev.people,
+                            rooms:       settingsData.rooms       && settingsData.rooms.length       ? settingsData.rooms       : prev.rooms,
+                            ticketTypes: settingsData.ticketTypes && settingsData.ticketTypes.length ? settingsData.ticketTypes : prev.ticketTypes,
+                            makes:       settingsData.makes       && settingsData.makes.length       ? settingsData.makes       : prev.makes,
+                            types:       settingsData.types       && settingsData.types.length       ? settingsData.types       : prev.types,
+                        }));
                     }
                     if (homesData.length > 0 && !currentHome) {
                         setCurrentHome(homesData[0].id);
@@ -1426,13 +1444,18 @@ if (view === 'home-select') {
                                     data={data}
                                     setData={setData}
                                     currentHome={currentHomeData}
-                                    onUpdateHome={(updates) => {
-                                        setData(prev => ({
-                                            ...prev,
-                                            homes: prev.homes?.map(h =>
-                                                h.id === currentHome ? { ...h, ...updates } : h
-                                            )
-                                        }));
+                                    onUpdateHome={async (updates) => {
+                                        // Update the homes state so the UI reflects the change immediately
+                                        setHomes(prev => prev.map(h =>
+                                            h.id === currentHome ? { ...h, ...updates } : h
+                                        ));
+                                        // Persist to backend
+                                        try {
+                                            const merged = { ...currentHomeData, ...updates };
+                                            await dbApi.updateHome(currentHome, merged);
+                                        } catch (err) {
+                                            setError('Failed to update home: ' + err.message);
+                                        }
                                     }}
                                     onLogout={() => {
                                         setSettingsAuthenticated(false);
@@ -2002,27 +2025,44 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const addItem = (field, value, setter) => {
+    const persistCustomSettings = async (updatedData) => {
+        await dbApi.updateSettings({
+            settings_password: updatedData.settingsPassword,
+            people:      updatedData.people      || [],
+            rooms:       updatedData.rooms       || [],
+            ticketTypes: updatedData.ticketTypes || [],
+            makes:       updatedData.makes       || [],
+            types:       updatedData.types       || [],
+        });
+    };
+
+    const addItem = async (field, value, setter) => {
         if (value.trim()) {
             const updatedArray = [...(data[field] || []), value.trim()];
-            setData(prev => ({
-                ...prev,
-                [field]: updatedArray
-            }));
+            const updatedData = { ...data, [field]: updatedArray };
+            setData(prev => ({ ...prev, [field]: updatedArray }));
             setter('');
-            setSuccess(`${field} updated successfully`);
-            setTimeout(() => setSuccess(''), 3000);
+            try {
+                await persistCustomSettings(updatedData);
+                setSuccess(`${field} updated successfully`);
+                setTimeout(() => setSuccess(''), 3000);
+            } catch (err) {
+                setError('Failed to save changes');
+            }
         }
     };
 
-    const removeItem = (field, value) => {
+    const removeItem = async (field, value) => {
         const updatedArray = (data[field] || []).filter(item => item !== value);
-        setData(prev => ({
-            ...prev,
-            [field]: updatedArray
-        }));
-        setSuccess(`${field} updated successfully`);
-        setTimeout(() => setSuccess(''), 3000);
+        const updatedData = { ...data, [field]: updatedArray };
+        setData(prev => ({ ...prev, [field]: updatedArray }));
+        try {
+            await persistCustomSettings(updatedData);
+            setSuccess(`${field} updated successfully`);
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setError('Failed to save changes');
+        }
     };
 
     const updateThreshold = (priority, level, value) => {

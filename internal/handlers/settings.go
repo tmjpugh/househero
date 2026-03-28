@@ -16,8 +16,23 @@ func NewSettingsHandler(db *database.DB) *SettingsHandler {
 	return &SettingsHandler{db: db}
 }
 
+// customSettings holds the per-user configurable lists stored as JSON text.
+type customSettings struct {
+	People      []string `json:"people"`
+	Rooms       []string `json:"rooms"`
+	TicketTypes []string `json:"ticketTypes"`
+	Makes       []string `json:"makes"`
+	Types       []string `json:"types"`
+}
+
+// UserSettings is the combined settings object exchanged with the frontend.
 type UserSettings struct {
-	SettingsPassword string `json:"settings_password"`
+	SettingsPassword string   `json:"settings_password"`
+	People           []string `json:"people"`
+	Rooms            []string `json:"rooms"`
+	TicketTypes      []string `json:"ticketTypes"`
+	Makes            []string `json:"makes"`
+	Types            []string `json:"types"`
 }
 
 func (h *SettingsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
@@ -27,17 +42,28 @@ func (h *SettingsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var nullablePassword sql.NullString
+	var nullableCustom sql.NullString
 	err := h.db.QueryRow(
-		"SELECT settings_password FROM user_settings WHERE user_id = $1",
+		"SELECT settings_password, custom_settings FROM user_settings WHERE user_id = $1",
 		userID,
-	).Scan(&nullablePassword)
+	).Scan(&nullablePassword, &nullableCustom)
 
 	var settings UserSettings
 	if err != nil || !nullablePassword.Valid || nullablePassword.String == "" {
-		// Row missing or password NULL/empty — return the '1234' default
 		settings.SettingsPassword = "1234"
 	} else {
 		settings.SettingsPassword = nullablePassword.String
+	}
+
+	if nullableCustom.Valid && nullableCustom.String != "" {
+		var cs customSettings
+		if jsonErr := json.Unmarshal([]byte(nullableCustom.String), &cs); jsonErr == nil {
+			settings.People = cs.People
+			settings.Rooms = cs.Rooms
+			settings.TicketTypes = cs.TicketTypes
+			settings.Makes = cs.Makes
+			settings.Types = cs.Types
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -56,11 +82,27 @@ func (h *SettingsHandler) UpdateSettings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err := h.db.Exec(
-		`INSERT INTO user_settings (user_id, settings_password)
-		 VALUES ($1, $2)
-		 ON CONFLICT (user_id) DO UPDATE SET settings_password = $2, updated_at = CURRENT_TIMESTAMP`,
-		userID, settings.SettingsPassword,
+	cs := customSettings{
+		People:      settings.People,
+		Rooms:       settings.Rooms,
+		TicketTypes: settings.TicketTypes,
+		Makes:       settings.Makes,
+		Types:       settings.Types,
+	}
+	customJSON, err := json.Marshal(cs)
+	if err != nil {
+		http.Error(w, "Failed to encode settings", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = h.db.Exec(
+		`INSERT INTO user_settings (user_id, settings_password, custom_settings)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (user_id) DO UPDATE
+		   SET settings_password = $2,
+		       custom_settings   = $3,
+		       updated_at        = CURRENT_TIMESTAMP`,
+		userID, settings.SettingsPassword, string(customJSON),
 	)
 	if err != nil {
 		http.Error(w, "Failed to update settings", http.StatusInternalServerError)

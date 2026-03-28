@@ -135,6 +135,8 @@ func (db *DB) RunMigrations() error {
 	CREATE INDEX IF NOT EXISTS idx_homes_user_id ON homes(user_id);
 	CREATE INDEX IF NOT EXISTS idx_tickets_home_id ON tickets(home_id);
 	CREATE INDEX IF NOT EXISTS idx_inventory_home_id ON inventory_items(home_id);
+
+	ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_settings TEXT;
 	`
 
 	_, err := db.Exec(migrationSQL)
