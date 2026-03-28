@@ -152,11 +152,15 @@ func (db *DB) RunMigrations() error {
 		return err
 	}
 
-	// Ensure default user_settings row exists for user 1
+	// Ensure default user_settings row exists for user 1;
+	// also patch any pre-existing row whose password is NULL or empty.
 	_, err = db.Exec(`
 		INSERT INTO user_settings (user_id, settings_password)
 		VALUES (1, '1234')
-		ON CONFLICT (user_id) DO NOTHING
+		ON CONFLICT (user_id) DO UPDATE
+		  SET settings_password = '1234'
+		  WHERE user_settings.settings_password IS NULL
+		     OR user_settings.settings_password = ''
 	`)
 	return err
 }

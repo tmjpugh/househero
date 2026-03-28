@@ -1092,6 +1092,10 @@ const addHome = async (home) => {
         setCurrentHome(newHome.id);
         setView('dashboard');
         setShowModal(null);
+        // Sync the settings password into state so it works immediately without a reload
+        if (home.settings_password) {
+            setData(prev => ({ ...prev, settingsPassword: home.settings_password }));
+        }
     } catch (err) {
         setError(`Failed to create home: ${err.message}`);
     } finally {

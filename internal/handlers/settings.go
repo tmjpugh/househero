@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -25,15 +26,18 @@ func (h *SettingsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 		userID = "1"
 	}
 
-	var settings UserSettings
+	var nullablePassword sql.NullString
 	err := h.db.QueryRow(
 		"SELECT settings_password FROM user_settings WHERE user_id = $1",
 		userID,
-	).Scan(&settings.SettingsPassword)
+	).Scan(&nullablePassword)
 
-	if err != nil {
-		http.Error(w, "Failed to load settings", http.StatusInternalServerError)
-		return
+	var settings UserSettings
+	if err != nil || !nullablePassword.Valid || nullablePassword.String == "" {
+		// Row missing or password NULL/empty — return the '1234' default
+		settings.SettingsPassword = "1234"
+	} else {
+		settings.SettingsPassword = nullablePassword.String
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -48,7 +52,7 @@ func (h *SettingsHandler) UpdateSettings(w http.ResponseWriter, r *http.Request)
 
 	var settings UserSettings
 	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -59,7 +63,7 @@ func (h *SettingsHandler) UpdateSettings(w http.ResponseWriter, r *http.Request)
 		userID, settings.SettingsPassword,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to update settings", http.StatusInternalServerError)
 		return
 	}
 
