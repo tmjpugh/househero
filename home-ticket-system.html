@@ -1684,55 +1684,59 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function InventoryView({ inventory, onNewItem, onItemClick }) {
-            return (
-                <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
-                        <h2>Inventory</h2>
-                        <button className="btn btn-primary" onClick={onNewItem}>
-                            + Add Item
-                        </button>
-                    </div>
+function InventoryView({ inventory, onNewItem, onItemClick }) {
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+                <h2>Inventory</h2>
+                <button className="btn btn-primary" onClick={onNewItem}>
+                    + Add Item
+                </button>
+            </div>
 
-                    <div className="inventory-grid">
-                        {inventory.map(item => (
-                            <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
-                                <div className="inventory-header">{item.name}</div>
-                                <div className="inventory-icons">
-                                    {(item.manuals && item.manuals.length > 0) && (
-                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
-                                            <span>📄</span>
-                                            <span className="inventory-icon-count">{item.manuals.length}</span>
-                                        </div>
-                                    )}
-                                    {(item.receipts && item.receipts.length > 0) && (
-                                        <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
-                                            <span>🧾</span>
-                                            <span className="inventory-icon-count">{item.receipts.length}</span>
-                                        </div>
-                                    )}
+            <div className="inventory-grid">
+                {inventory.map(item => (
+                    <div key={item.id} className="inventory-card" onClick={() => onItemClick(item)}>
+                        <div className="inventory-header">{item.name}</div>
+                        <div className="inventory-icons">
+                            {(item.manuals && item.manuals.length > 0) && (
+                                <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                    <span>📄</span>
+                                    <span className="inventory-icon-count">{item.manuals.length}</span>
                                 </div>
-                                <div className="inventory-details">
-                                    <div><strong>Type:</strong> {item.type}</div>
-                                    <div><strong>Make:</strong> {item.make}</div>
-                                    <div><strong>Model:</strong> {item.model}</div>
-                                    <div><strong>Room:</strong> {item.room}</div>
-                                    {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
-                                    {item.purchase_date && (
-                                        <div><strong>Purchased:</strong> {formatDate(item.purchase_date)}</div>
-                                    )}
+                            )}
+                            {(item.receipts && item.receipts.length > 0) && (
+                                <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                    <span>🧾</span>
+                                    <span className="inventory-icon-count">{item.receipts.length}</span>
                                 </div>
-                            </div>
-                        ))}
-                        {inventory.length === 0 && (
-                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
-                                No inventory items yet. Add your first item!
-                            </div>
-                        )}
+                            )}
+                        </div>
+                        <div className="inventory-details">
+                            <div><strong>Type:</strong> {item.type}</div>
+                            <div><strong>Make:</strong> {item.make}</div>
+                            <div><strong>Model:</strong> {item.model || 'N/A'}</div>
+                            <div><strong>Room:</strong> {item.room}</div>
+                            {item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
+                            {item.purchase_date && (
+                                <div><strong>Purchased:</strong> {new Date(item.purchase_date).toLocaleDateString()}</div>
+                            )}
+                            {item.warranty_expires && (
+                                <div><strong>Warranty:</strong> {new Date(item.warranty_expires).toLocaleDateString()}</div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            );
-        }
+                ))}
+                {inventory.length === 0 && (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
+                        No inventory items yet. Add your first item!
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 
         function RoomsView({ rooms, tickets, inventory, onTicketClick, onItemClick }) {
             const [expandedRoom, setExpandedRoom] = useState(null);
@@ -2630,48 +2634,207 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     );
 }
 
-        function AddInventoryModal({ onClose, onSave, data }) {
-            const [formData, setFormData] = useState({
-                name: '',
-                type: data.types[0] || 'Appliance',
-                make: data.makes[0] || 'GE',
-                model: '',
-                room: data.rooms[0] || 'Kitchen'
-            });
+function AddInventoryModal({ onClose, onSave, data }) {
+    const [formData, setFormData] = useState({
+        name: '',
+        type: data.types[0] || 'Appliance',
+        make: data.makes[0] || 'GE',
+        model: '',
+        room: data.rooms[0] || 'Kitchen',
+        serial_number: '',
+        purchase_date: '',
+        warranty_expires: ''
+    });
 
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>Add Inventory</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Add Inventory Item</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    <div className="form-group">
+                        <label>Item Name *</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            placeholder="e.g., Kitchen Refrigerator"
+                        />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Type *</label>
+                            <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                {data.types.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="modal-body">
+                        <div className="form-group">
+                            <label>Make *</label>
+                            <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
+                                {data.makes.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Model</label>
+                            <input
+                                type="text"
+                                value={formData.model}
+                                onChange={(e) => setFormData({...formData, model: e.target.value})}
+                                placeholder="Model number"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Room *</label>
+                            <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
+                                {data.rooms.map(r => (
+                                    <option key={r} value={r}>{r}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Serial Number</label>
+                            <input
+                                type="text"
+                                value={formData.serial_number}
+                                onChange={(e) => setFormData({...formData, serial_number: e.target.value})}
+                                placeholder="Serial number"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Purchase Date</label>
+                            <input
+                                type="date"
+                                value={formData.purchase_date}
+                                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Warranty Expires</label>
+                        <input
+                            type="date"
+                            value={formData.warranty_expires}
+                            onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
+                        />
+                    </div>
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => formData.name && onSave(formData)}
+                        disabled={!formData.name}
+                    >
+                        Add Item
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) {
+    const [editing, setEditing] = useState(false);
+    const [formData, setFormData] = useState(item);
+
+    const relatedTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
+    const openTickets = relatedTickets.filter(t => t.status !== 'closed');
+
+    const handleSave = () => {
+        onUpdate(item.id, formData);
+        setEditing(false);
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>{item.name}</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                <div className="modal-body">
+                    {!editing ? (
+                        <div>
+                            <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+                                <div><strong>Type:</strong> {item.type}</div>
+                                <div><strong>Make:</strong> {item.make}</div>
+                                <div><strong>Model:</strong> {item.model || 'N/A'}</div>
+                                <div><strong>Room:</strong> {item.room}</div>
+                                {item.serial_number && <div><strong>Serial Number:</strong> {item.serial_number}</div>}
+                                {item.purchase_date && (
+                                    <div><strong>Purchase Date:</strong> {formatDate(item.purchase_date)}</div>
+                                )}
+                                {item.warranty_expires && (
+                                    <div><strong>Warranty Expires:</strong> {formatDate(item.warranty_expires)}</div>
+                                )}
+                            </div>
+
+                            <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Related Tickets</h3>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca', marginRight: '0.5rem' }}>
+                                    {openTickets.length} Open
+                                </span>
+                                <span className="badge" style={{ background: '#f0f0f0', color: '#666' }}>
+                                    {relatedTickets.length - openTickets.length} Closed
+                                </span>
+                            </div>
+                            {relatedTickets.length > 0 ? (
+                                <div className="ticket-list">
+                                    {relatedTickets.map(ticket => (
+                                        <div
+                                            key={ticket.id}
+                                            className={`ticket-card priority-${ticket.priority}`}
+                                            onClick={() => onViewTicket(ticket)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <div className="ticket-title">{ticket.title}</div>
+                                            <div className="ticket-meta">
+                                                <span className="badge badge-status">{ticket.status}</span>
+                                                <span>{formatDate(ticket.created_at)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: '#666', fontSize: '0.9rem' }}>No related tickets</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div>
                             <div className="form-group">
-                                <label>Name *</label>
+                                <label>Item Name *</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    placeholder="e.g., Kitchen Refrigerator"
                                 />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Type</label>
-                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                        {data.types.map(t => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
+                                    <input
+                                        type="text"
+                                        value={formData.type}
+                                        onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label>Make</label>
-                                    <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
-                                        {data.makes.map(m => (
-                                            <option key={m} value={m}>{m}</option>
-                                        ))}
-                                    </select>
+                                    <input
+                                        type="text"
+                                        value={formData.make}
+                                        onChange={(e) => setFormData({...formData, make: e.target.value})}
+                                    />
                                 </div>
                             </div>
                             <div className="form-row">
@@ -2679,140 +2842,72 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <label>Model</label>
                                     <input
                                         type="text"
-                                        value={formData.model}
+                                        value={formData.model || ''}
                                         onChange={(e) => setFormData({...formData, model: e.target.value})}
                                     />
                                 </div>
                                 <div className="form-group">
                                     <label>Room</label>
-                                    <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                        {data.rooms.map(r => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
+                                    <input
+                                        type="text"
+                                        value={formData.room}
+                                        onChange={(e) => setFormData({...formData, room: e.target.value})}
+                                    />
                                 </div>
                             </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Serial Number</label>
+                                    <input
+                                        type="text"
+                                        value={formData.serial_number || ''}
+                                        onChange={(e) => setFormData({...formData, serial_number: e.target.value})}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Purchase Date</label>
+                                    <input
+                                        type="date"
+                                        value={formData.purchase_date ? formData.purchase_date.split('T')[0] : ''}
+                                        onChange={(e) => setFormData({...formData, purchase_date: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Warranty Expires</label>
+                                <input
+                                    type="date"
+                                    value={formData.warranty_expires ? formData.warranty_expires.split('T')[0] : ''}
+                                    onChange={(e) => setFormData({...formData, warranty_expires: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                                />
+                            </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => formData.name && onSave(formData)}
-                                disabled={!formData.name}
-                            >
-                                Create
+                    )}
+                </div>
+                <div className="modal-footer">
+                    {!editing ? (
+                        <>
+                            <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                            <button className="btn btn-primary" onClick={() => setEditing(true)}>
+                                Edit Item
                             </button>
-                        </div>
-                    </div>
+                        </>
+                    ) : (
+                        <>
+                            <button className="btn btn-secondary" onClick={() => {
+                                setFormData(item);
+                                setEditing(false);
+                            }}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleSave}>
+                                Save Changes
+                            </button>
+                        </>
+                    )}
                 </div>
-            );
-        }
-
-        function ViewInventoryModal({ item, onClose, onUpdate, tickets, onViewTicket }) {
-            const [editing, setEditing] = useState(false);
-            const [formData, setFormData] = useState(item);
-
-            const relatedTickets = tickets.filter(t => parseInt(t.inventory_item_id) === item.id);
-
-            const handleSave = () => {
-                onUpdate(item.id, formData);
-                setEditing(false);
-            };
-
-            return (
-                <div className="modal-overlay" onClick={onClose}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>{item.name}</h2>
-                            <button className="close-btn" onClick={onClose}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            {!editing ? (
-                                <div>
-                                    <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
-                                        <div><strong>Type:</strong> {item.type}</div>
-                                        <div><strong>Make:</strong> {item.make}</div>
-                                        <div><strong>Model:</strong> {item.model || 'N/A'}</div>
-                                        <div><strong>Room:</strong> {item.room}</div>
-
-{item.serial_number && <div><strong>Serial:</strong> {item.serial_number}</div>}
-{item.purchase_date && (
-    <div><strong>Purchased:</strong> {formatDate(item.purchase_date)}</div>
-)}
-
-                                        {item.warranty_expires && <div><strong>Warranty:</strong> {formatDate(item.warranty_expires)}</div>}
-                                    </div>
-
-                                    <h3 style={{ marginBottom: '1rem' }}>Related Tickets</h3>
-                                    {relatedTickets.length > 0 ? (
-                                        <div className="ticket-list">
-                                            {relatedTickets.map(t => (
-                                                <div key={t.id} className="ticket-card" onClick={() => onViewTicket(t)} style={{ cursor: 'pointer' }}>
-                                                    <div className="ticket-title">{t.title}</div>
-                                                    <span className="badge badge-status">{t.status}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p style={{ color: '#666' }}>No related tickets</p>
-                                    )}
-                                </div>
-                            ) : (
-                                <div>
-                                    <div className="form-group">
-                                        <label>Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Model</label>
-                                            <input
-                                                type="text"
-                                                value={formData.model}
-                                                onChange={(e) => setFormData({...formData, model: e.target.value})}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Serial</label>
-                                            <input
-                                                type="text"
-                                                value={formData.serial_number}
-                                                onChange={(e) => setFormData({...formData, serial_number: e.target.value})}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="modal-footer">
-                            {!editing ? (
-                                <>
-                                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
-                                    <button className="btn btn-primary" onClick={() => setEditing(true)}>
-                                        Edit
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button className="btn btn-secondary" onClick={() => {
-                                        setFormData(item);
-                                        setEditing(false);
-                                    }}>Cancel</button>
-                                    <button className="btn btn-primary" onClick={handleSave}>
-                                        Save
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
+            </div>
+        </div>
+    );
+}
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
