@@ -138,5 +138,25 @@ func (db *DB) RunMigrations() error {
 	`
 
 	_, err := db.Exec(migrationSQL)
+	if err != nil {
+		return err
+	}
+
+	// Ensure default user (id=1) exists so FK constraints work for single-user mode
+	_, err = db.Exec(`
+		INSERT INTO users (id, email, password)
+		VALUES (1, 'default@househero.local', 'not-used')
+		ON CONFLICT (id) DO NOTHING
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Ensure default user_settings row exists for user 1
+	_, err = db.Exec(`
+		INSERT INTO user_settings (user_id, settings_password)
+		VALUES (1, '1234')
+		ON CONFLICT (user_id) DO NOTHING
+	`)
 	return err
 }

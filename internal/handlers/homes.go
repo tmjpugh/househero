@@ -107,6 +107,19 @@ func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Save settings_password if provided
+	if req.SettingsPassword != "" {
+		if _, err := h.db.Exec(
+			`INSERT INTO user_settings (user_id, settings_password)
+			 VALUES ($1, $2)
+			 ON CONFLICT (user_id) DO UPDATE SET settings_password = $2, updated_at = CURRENT_TIMESTAMP`,
+			userID, req.SettingsPassword,
+		); err != nil {
+			http.Error(w, "Failed to save settings password", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	home.UserID, _ = strconv.ParseInt(userID, 10, 64)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

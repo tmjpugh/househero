@@ -16,6 +16,7 @@ func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
 	homeHandler := handlers.NewHomeHandler(db)
 	ticketHandler := handlers.NewTicketHandler(db)
 	inventoryHandler := handlers.NewInventoryHandler(db)
+	settingsHandler := handlers.NewSettingsHandler(db)
 	
 	// Create uploads directory
 	uploadDir := "/app/uploads"
@@ -64,6 +65,10 @@ func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
 	// Upload routes - INVENTORY FILES
 	router.HandleFunc("/api/inventory/{id}/receipts", uploadHandler.UploadInventoryReceipt).Methods("POST")
 	router.HandleFunc("/api/inventory/{id}/manuals", uploadHandler.UploadInventoryManual).Methods("POST")
+
+	// Settings routes
+	router.HandleFunc("/api/settings", settingsHandler.GetSettings).Methods("GET")
+	router.HandleFunc("/api/settings", settingsHandler.UpdateSettings).Methods("PUT")
 
 	return router
 }

@@ -954,6 +954,22 @@ const dbApi = {
         });
         if (!res.ok) throw new Error('Failed to update inventory');
         return res.json();
+    },
+
+    getSettings: async () => {
+        const res = await fetch('/api/settings');
+        if (!res.ok) throw new Error('Failed to load settings');
+        return res.json();
+    },
+
+    updateSettings: async (settings) => {
+        const res = await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        if (!res.ok) throw new Error('Failed to update settings');
+        return res.json();
     }
 };
 
@@ -1014,8 +1030,14 @@ const dbApi = {
             const loadHomes = async () => {
                 try {
                     setLoading(true);
-                    const homesData = await dbApi.getHomes();
+                    const [homesData, settingsData] = await Promise.all([
+                        dbApi.getHomes(),
+                        dbApi.getSettings().catch(() => ({ settings_password: '1234' }))
+                    ]);
                     setHomes(homesData);
+                    if (settingsData && settingsData.settings_password) {
+                        setData(prev => ({ ...prev, settingsPassword: settingsData.settings_password }));
+                    }
                     if (homesData.length > 0 && !currentHome) {
                         setCurrentHome(homesData[0].id);
                         setView('dashboard');
@@ -2030,6 +2052,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
             try {
                 setLoading(true);
                 setError('');
+                await dbApi.updateSettings({ settings_password: newPassword.trim() });
                 setData(prev => ({
                     ...prev,
                     settingsPassword: newPassword.trim()
