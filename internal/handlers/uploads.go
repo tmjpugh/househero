@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -69,7 +70,7 @@ func (h *UploadHandler) UploadInventoryReceipt(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	itemID := vars["id"]
 
-	h.handleMultipartUpload(w, r, itemID, "receipts", "receipt", "receipts")
+	h.handleInventoryUpload(w, r, itemID, "receipts", "receipt", "receipt")
 }
 
 // UploadInventoryManual - multipart form file upload for inventory manuals
@@ -77,7 +78,115 @@ func (h *UploadHandler) UploadInventoryManual(w http.ResponseWriter, r *http.Req
 	vars := mux.Vars(r)
 	itemID := vars["id"]
 
-	h.handleMultipartUpload(w, r, itemID, "manuals", "manual", "manuals")
+	h.handleInventoryUpload(w, r, itemID, "manuals", "manual", "manual")
+}
+
+// DeleteInventoryDocument - delete an inventory document record and its file
+func (h *UploadHandler) DeleteInventoryDocument(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	docID := vars["docId"]
+
+	// Get the document URL before deleting
+	var fileURL string
+	err := h.db.QueryRow("SELECT url FROM documents WHERE id = $1", docID).Scan(&fileURL)
+	if err != nil {
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete from database
+	_, err = h.db.Exec("DELETE FROM documents WHERE id = $1", docID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Delete file from disk (best effort)
+	filePath := filepath.Join(h.uploadDir, strings.TrimPrefix(fileURL, "/uploads/"))
+	if strings.HasPrefix(filePath, h.uploadDir) {
+		if err := os.Remove(filePath); err != nil {
+			log.Printf("Warning: failed to delete file %s: %v", filePath, err)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}
+
+// handleInventoryUpload - upload a file for an inventory item and save to documents table
+func (h *UploadHandler) handleInventoryUpload(w http.ResponseWriter, r *http.Request, itemID string, subdir string, formField string, docType string) {
+	if err := r.ParseMultipartForm(100 * 1024 * 1024); err != nil { // 100MB max
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, fileHeader, err := r.FormFile(formField)
+	if err != nil {
+		http.Error(w, "No file provided", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Validate file type
+	if !h.isValidFileType(fileHeader.Filename, docType) {
+		http.Error(w, "Invalid file type. Only images (jpg, jpeg, png, gif, webp, bmp), PDF, and TXT files are allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Generate unique filename
+	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + "-" + sanitizeFilename(fileHeader.Filename)
+	uploadPath := filepath.Join(h.uploadDir, subdir)
+	filePath := filepath.Join(uploadPath, filename)
+
+	// Save file to disk
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	written, err := io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Failed to copy file", http.StatusInternalServerError)
+		return
+	}
+
+	// Get display name
+	displayName := r.FormValue("name")
+	if displayName == "" {
+		displayName = fileHeader.Filename
+	}
+
+	// Save record to database
+	fileURL := "/uploads/" + subdir + "/" + filename
+	var docID int64
+	var uploadedAt time.Time
+	err = h.db.QueryRow(
+		"INSERT INTO documents (inventory_item_id, doc_type, name, url) VALUES ($1, $2, $3, $4) RETURNING id, uploaded_at",
+		itemID, docType, displayName, fileURL,
+	).Scan(&docID, &uploadedAt)
+	if err != nil {
+		if cleanupErr := os.Remove(filePath); cleanupErr != nil {
+			log.Printf("Warning: failed to clean up file %s after DB error: %v", filePath, cleanupErr)
+		}
+		http.Error(w, "Failed to save document record", http.StatusInternalServerError)
+		return
+	}
+
+	response := UploadResponse{
+		ID:         docID,
+		URL:        fileURL,
+		Name:       displayName,
+		Type:       docType,
+		Size:       written,
+		UploadedAt: uploadedAt.Format(time.RFC3339),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
 }
 
 // handleMultipartUpload - generic multipart form handler
@@ -191,8 +300,8 @@ func (h *UploadHandler) isValidFileType(filename string, uploadType string) bool
 	validTypes := map[string][]string{
 		"photo":    {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"},
 		"document": {".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"},
-		"receipt":  {".pdf", ".jpg", ".jpeg", ".png", ".gif"},
-		"manual":   {".pdf", ".doc", ".docx", ".txt", ".png", ".jpg", ".jpeg"},
+		"receipt":  {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf", ".txt"},
+		"manual":   {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf", ".txt"},
 	}
 
 	allowed, exists := validTypes[uploadType]
