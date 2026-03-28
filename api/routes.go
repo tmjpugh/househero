@@ -64,6 +64,7 @@ func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
 	// Upload routes - INVENTORY FILES
 	router.HandleFunc("/api/inventory/{id}/receipts", uploadHandler.UploadInventoryReceipt).Methods("POST")
 	router.HandleFunc("/api/inventory/{id}/manuals", uploadHandler.UploadInventoryManual).Methods("POST")
+	router.HandleFunc("/api/inventory/{id}/documents/{docId}", uploadHandler.DeleteInventoryDocument).Methods("DELETE")
 
 	return router
 }
