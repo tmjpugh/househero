@@ -135,8 +135,43 @@ func (db *DB) RunMigrations() error {
 	CREATE INDEX IF NOT EXISTS idx_homes_user_id ON homes(user_id);
 	CREATE INDEX IF NOT EXISTS idx_tickets_home_id ON tickets(home_id);
 	CREATE INDEX IF NOT EXISTS idx_inventory_home_id ON inventory_items(home_id);
+
+	ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_settings TEXT;
+
+	CREATE TABLE IF NOT EXISTS home_settings (
+		id SERIAL PRIMARY KEY,
+		home_id INTEGER NOT NULL UNIQUE REFERENCES homes(id) ON DELETE CASCADE,
+		settings_password VARCHAR(255) NOT NULL DEFAULT '1234',
+		custom_settings TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 
 	_, err := db.Exec(migrationSQL)
+	if err != nil {
+		return err
+	}
+
+	// Ensure default user (id=1) exists so FK constraints work for single-user mode
+	_, err = db.Exec(`
+		INSERT INTO users (id, email, password)
+		VALUES (1, 'default@househero.local', 'not-used')
+		ON CONFLICT (id) DO NOTHING
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Ensure default user_settings row exists for user 1;
+	// also patch any pre-existing row whose password is NULL or empty.
+	_, err = db.Exec(`
+		INSERT INTO user_settings (user_id, settings_password)
+		VALUES (1, '1234')
+		ON CONFLICT (user_id) DO UPDATE
+		  SET settings_password = '1234'
+		  WHERE user_settings.settings_password IS NULL
+		     OR user_settings.settings_password = ''
+	`)
 	return err
 }

@@ -935,6 +935,12 @@ const dbApi = {
         if (!res.ok) throw new Error('Failed to load inventory');
         return res.json() || [];
     },
+
+    getInventoryItem: async (id) => {
+        const res = await fetch(`/api/inventory/${id}`);
+        if (!res.ok) throw new Error('Failed to load inventory item');
+        return res.json();
+    },
     
     createInventory: async (item) => {
         const res = await fetch('/api/inventory', {
@@ -953,6 +959,52 @@ const dbApi = {
             body: JSON.stringify(updates)
         });
         if (!res.ok) throw new Error('Failed to update inventory');
+        return res.json();
+    },
+
+    uploadDocument: async (itemId, type, file, displayName) => {
+        const fd = new FormData();
+        fd.append(type, file);
+        if (displayName) fd.append('name', displayName);
+        const res = await fetch(`/api/inventory/${itemId}/${type}s`, {
+            method: 'POST',
+            body: fd
+        });
+        if (!res.ok) throw new Error(`Failed to upload ${type}`);
+        return res.json();
+    },
+
+    deleteDocument: async (itemId, docId) => {
+        const res = await fetch(`/api/inventory/${itemId}/documents/${docId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('Failed to delete document');
+        return res.json();
+    },
+
+    getSettings: async (homeId) => {
+        const res = await fetch(`/api/homes/${homeId}/settings`);
+        if (!res.ok) throw new Error('Failed to load settings');
+        return res.json();
+    },
+
+    updateSettings: async (homeId, settings) => {
+        const res = await fetch(`/api/homes/${homeId}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        if (!res.ok) throw new Error('Failed to update settings');
+        return res.json();
+    },
+
+    updateHome: async (id, updates) => {
+        const res = await fetch(`/api/homes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update home');
         return res.json();
     }
 };
@@ -1003,13 +1055,33 @@ const dbApi = {
                 loadHomes();
             }, []);
 
-            // Load tickets & inventory when home changes
+            // Load tickets, inventory & per-home settings when home changes
             useEffect(() => {
                 if (currentHome) {
                     loadTickets();
                     loadInventory();
+                    loadSettings(currentHome);
                 }
             }, [currentHome]);
+
+            const loadSettings = async (homeId) => {
+                try {
+                    const settingsData = await dbApi.getSettings(homeId).catch(() => null);
+                    if (settingsData) {
+                        setData(prev => ({
+                            ...prev,
+                            settingsPassword: settingsData.settings_password || '1234',
+                            people:      settingsData.people      && settingsData.people.length      ? settingsData.people      : initialData.people,
+                            rooms:       settingsData.rooms       && settingsData.rooms.length       ? settingsData.rooms       : initialData.rooms,
+                            ticketTypes: settingsData.ticketTypes && settingsData.ticketTypes.length ? settingsData.ticketTypes : initialData.ticketTypes,
+                            makes:       settingsData.makes       && settingsData.makes.length       ? settingsData.makes       : initialData.makes,
+                            types:       settingsData.types       && settingsData.types.length       ? settingsData.types       : initialData.types,
+                        }));
+                    }
+                } catch (err) {
+                    // Non-fatal: keep current defaults
+                }
+            };
 
             const loadHomes = async () => {
                 try {
@@ -1070,6 +1142,10 @@ const addHome = async (home) => {
         setCurrentHome(newHome.id);
         setView('dashboard');
         setShowModal(null);
+        // Sync the settings password into state so it works immediately without a reload
+        if (home.settings_password) {
+            setData(prev => ({ ...prev, settingsPassword: home.settings_password }));
+        }
     } catch (err) {
         setError(`Failed to create home: ${err.message}`);
     } finally {
@@ -1221,6 +1297,13 @@ if (view === 'home-select') {
     return (
         <>
             <HomeSelector homes={homes} onSelectHome={(homeId) => {
+                // Reset per-home settings to defaults while the new home's settings load
+                setData(prev => ({
+                    ...prev,
+                    ...initialData,
+                    settingsPassword: '1234',
+                }));
+                setSettingsAuthenticated(false);
                 setCurrentHome(homeId);
                 setView('dashboard');
             }} onAddHome={() => {
@@ -1245,6 +1328,7 @@ if (view === 'home-select') {
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
                             <button className="btn btn-secondary" onClick={() => {
                                 setCurrentHome(null);
+                                setSettingsAuthenticated(false);
                                 setView('home-select');
                             }}>
                                 Change Home
@@ -1400,13 +1484,18 @@ if (view === 'home-select') {
                                     data={data}
                                     setData={setData}
                                     currentHome={currentHomeData}
-                                    onUpdateHome={(updates) => {
-                                        setData(prev => ({
-                                            ...prev,
-                                            homes: prev.homes?.map(h =>
-                                                h.id === currentHome ? { ...h, ...updates } : h
-                                            )
-                                        }));
+                                    onUpdateHome={async (updates) => {
+                                        // Update the homes state so the UI reflects the change immediately
+                                        setHomes(prev => prev.map(h =>
+                                            h.id === currentHome ? { ...h, ...updates } : h
+                                        ));
+                                        // Persist to backend
+                                        try {
+                                            const merged = { ...currentHomeData, ...updates };
+                                            await dbApi.updateHome(currentHome, merged);
+                                        } catch (err) {
+                                            setError('Failed to update home: ' + err.message);
+                                        }
                                     }}
                                     onLogout={() => {
                                         setSettingsAuthenticated(false);
@@ -1481,6 +1570,7 @@ if (view === 'home-select') {
                                 setModalData(ticket);
                                 setShowModal('view-ticket');
                             }}
+                            onDocumentChange={loadInventory}
                         />
                     )}
                 </div>
@@ -1747,13 +1837,37 @@ function InventoryView({ inventory, tickets, onNewItem, onItemClick }) {
                             <div className="inventory-header">{item.name}</div>
                             <div className="inventory-icons">
                                 {(item.manuals && item.manuals.length > 0) && (
-                                    <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                    <div
+                                        className="inventory-icon-group"
+                                        title={item.manuals.length === 1 ? `Download manual: ${item.manuals[0].name}` : `${item.manuals.length} manuals – click to view`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (item.manuals.length === 1) {
+                                                window.open(item.manuals[0].url, '_blank');
+                                            } else {
+                                                onItemClick(item);
+                                            }
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         <span>📄</span>
                                         <span className="inventory-icon-count">{item.manuals.length}</span>
                                     </div>
                                 )}
                                 {(item.receipts && item.receipts.length > 0) && (
-                                    <div className="inventory-icon-group" onClick={(e) => e.stopPropagation()}>
+                                    <div
+                                        className="inventory-icon-group"
+                                        title={item.receipts.length === 1 ? `Download receipt: ${item.receipts[0].name}` : `${item.receipts.length} receipts – click to view`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (item.receipts.length === 1) {
+                                                window.open(item.receipts[0].url, '_blank');
+                                            } else {
+                                                onItemClick(item);
+                                            }
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         <span>🧾</span>
                                         <span className="inventory-icon-count">{item.receipts.length}</span>
                                     </div>
@@ -1976,27 +2090,45 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const addItem = (field, value, setter) => {
+    const persistCustomSettings = async (updatedData) => {
+        if (!currentHome?.id) return;
+        await dbApi.updateSettings(currentHome.id, {
+            settings_password: updatedData.settingsPassword,
+            people:      updatedData.people      || [],
+            rooms:       updatedData.rooms       || [],
+            ticketTypes: updatedData.ticketTypes || [],
+            makes:       updatedData.makes       || [],
+            types:       updatedData.types       || [],
+        });
+    };
+
+    const addItem = async (field, value, setter) => {
         if (value.trim()) {
             const updatedArray = [...(data[field] || []), value.trim()];
-            setData(prev => ({
-                ...prev,
-                [field]: updatedArray
-            }));
+            const updatedData = { ...data, [field]: updatedArray };
+            setData(prev => ({ ...prev, [field]: updatedArray }));
             setter('');
-            setSuccess(`${field} updated successfully`);
-            setTimeout(() => setSuccess(''), 3000);
+            try {
+                await persistCustomSettings(updatedData);
+                setSuccess(`${field} updated successfully`);
+                setTimeout(() => setSuccess(''), 3000);
+            } catch (err) {
+                setError('Failed to save changes');
+            }
         }
     };
 
-    const removeItem = (field, value) => {
+    const removeItem = async (field, value) => {
         const updatedArray = (data[field] || []).filter(item => item !== value);
-        setData(prev => ({
-            ...prev,
-            [field]: updatedArray
-        }));
-        setSuccess(`${field} updated successfully`);
-        setTimeout(() => setSuccess(''), 3000);
+        const updatedData = { ...data, [field]: updatedArray };
+        setData(prev => ({ ...prev, [field]: updatedArray }));
+        try {
+            await persistCustomSettings(updatedData);
+            setSuccess(`${field} updated successfully`);
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setError('Failed to save changes');
+        }
     };
 
     const updateThreshold = (priority, level, value) => {
@@ -2030,6 +2162,14 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
             try {
                 setLoading(true);
                 setError('');
+                await dbApi.updateSettings(currentHome.id, {
+                    settings_password: newPassword.trim(),
+                    people:      data.people      || [],
+                    rooms:       data.rooms       || [],
+                    ticketTypes: data.ticketTypes || [],
+                    makes:       data.makes       || [],
+                    types:       data.types       || [],
+                });
                 setData(prev => ({
                     ...prev,
                     settingsPassword: newPassword.trim()
@@ -2900,7 +3040,11 @@ function AddInventoryModal({ onClose, onSave, data }) {
                     <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
                     <button
                         className="btn btn-primary"
-                        onClick={() => formData.name && onSave(formData)}
+                        onClick={() => formData.name && onSave({
+                            ...formData,
+                            purchase_date: formData.purchase_date === '' ? null : formData.purchase_date,
+                            warranty_expires: formData.warranty_expires === '' ? null : formData.warranty_expires,
+                        })}
                         disabled={!formData.name}
                     >
                         Add Item
@@ -2911,9 +3055,13 @@ function AddInventoryModal({ onClose, onSave, data }) {
     );
 }
 
-function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTicket }) {
+function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTicket, onDocumentChange }) {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(item);
+    const [localManuals, setLocalManuals] = useState(item.manuals || []);
+    const [localReceipts, setLocalReceipts] = useState(item.receipts || []);
+    const [uploading, setUploading] = useState(false);
+    const [docError, setDocError] = useState('');
 
     const relatedTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
     const openTickets = relatedTickets.filter(t => t.status !== 'closed');
@@ -2921,6 +3069,42 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
     const handleSave = () => {
         onUpdate(item.id, formData);
         setEditing(false);
+    };
+
+    const handleUpload = async (e, type) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        setDocError('');
+        try {
+            const doc = await dbApi.uploadDocument(item.id, type, file, file.name);
+            if (type === 'manual') {
+                setLocalManuals(prev => [...prev, doc]);
+            } else {
+                setLocalReceipts(prev => [...prev, doc]);
+            }
+            onDocumentChange && onDocumentChange();
+        } catch (err) {
+            setDocError(`Upload failed: ${err.message}`);
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleDeleteDoc = async (docId, type) => {
+        setDocError('');
+        try {
+            await dbApi.deleteDocument(item.id, docId);
+            if (type === 'manual') {
+                setLocalManuals(prev => prev.filter(d => d.id !== docId));
+            } else {
+                setLocalReceipts(prev => prev.filter(d => d.id !== docId));
+            }
+            onDocumentChange && onDocumentChange();
+        } catch (err) {
+            setDocError(`Delete failed: ${err.message}`);
+        }
     };
 
     return (
@@ -2947,7 +3131,43 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 )}
                             </div>
 
-                            <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Related Tickets</h3>
+                            {/* Documents section */}
+                            <h3 style={{ marginBottom: '0.75rem' }}>Documents</h3>
+                            {docError && <div style={{ color: '#dc2626', marginBottom: '0.5rem', fontSize: '0.875rem' }}>{docError}</div>}
+
+                            {/* Manuals */}
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>📄 Manuals</div>
+                                {localManuals.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No manuals uploaded yet.</p>}
+                                {localManuals.map(doc => (
+                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                        <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
+                                        <button onClick={() => handleDeleteDoc(doc.id, 'manual')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
+                                    </div>
+                                ))}
+                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
+                                    {uploading ? 'Uploading…' : '+ Add Manual'}
+                                    <input type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'manual')} />
+                                </label>
+                            </div>
+
+                            {/* Receipts */}
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>🧾 Receipts</div>
+                                {localReceipts.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No receipts uploaded yet.</p>}
+                                {localReceipts.map(doc => (
+                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                        <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
+                                        <button onClick={() => handleDeleteDoc(doc.id, 'receipt')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
+                                    </div>
+                                ))}
+                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
+                                    {uploading ? 'Uploading…' : '+ Add Receipt'}
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'receipt')} />
+                                </label>
+                            </div>
+
+                            <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Related Tickets</h3>
                             <div style={{ marginBottom: '1rem' }}>
                                 <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca', marginRight: '0.5rem' }}>
                                     {openTickets.length} Open

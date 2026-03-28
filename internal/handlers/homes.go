@@ -107,6 +107,21 @@ func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create per-home settings row with a default password (or the one provided at creation)
+	initialPassword := "1234"
+	if req.SettingsPassword != "" {
+		initialPassword = req.SettingsPassword
+	}
+	if _, err := h.db.Exec(
+		`INSERT INTO home_settings (home_id, settings_password)
+		 VALUES ($1, $2)
+		 ON CONFLICT (home_id) DO NOTHING`,
+		home.ID, initialPassword,
+	); err != nil {
+		http.Error(w, "Failed to initialise home settings", http.StatusInternalServerError)
+		return
+	}
+
 	home.UserID, _ = strconv.ParseInt(userID, 10, 64)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
