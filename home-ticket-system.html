@@ -1131,30 +1131,14 @@ const addHome = async (home) => {
                 setTickets(updatedTickets);
             };
 
-            const addInventoryItem = async (item, manualFiles, receiptFiles) => {
+            const addInventoryItem = async (item) => {
                 try {
                     setLoading(true);
                     const newItem = await dbApi.createInventory({
                         ...item,
                         home_id: currentHome
                     });
-
-                    // Upload any selected files after item creation
-                    const uploadDocs = async (files, docType) => {
-                        for (const file of (files || [])) {
-                            const fd = new FormData();
-                            fd.append(docType, file);
-                            const res = await fetch(`/api/inventory/${newItem.id}/${docType}s`, { method: 'POST', body: fd });
-                            if (!res.ok) {
-                                const text = await res.text();
-                                throw new Error(`Failed to upload ${docType} "${file.name}": ${text}`);
-                            }
-                        }
-                    };
-                    await uploadDocs(manualFiles, 'manual');
-                    await uploadDocs(receiptFiles, 'receipt');
-
-                    await loadInventory();
+                    setInventory([...inventory, newItem]);
                     setShowModal(null);
                     setError('');
                 } catch (err) {
@@ -2829,10 +2813,6 @@ function AddInventoryModal({ onClose, onSave, data }) {
         purchase_date: '',
         warranty_expires: ''
     });
-    const [receiptFiles, setReceiptFiles] = useState([]);
-    const [manualFiles, setManualFiles] = useState([]);
-
-    const ACCEPTED_FILE_TYPES = '.jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.txt';
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -2915,32 +2895,12 @@ function AddInventoryModal({ onClose, onSave, data }) {
                             onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
                         />
                     </div>
-                    <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                        <label><strong>Manuals</strong> <span style={{ fontWeight: 'normal', fontSize: '0.85rem', color: '#666' }}>(images, PDF, TXT)</span></label>
-                        {manualFiles.map((f, i) => (
-                            <div key={i} style={{ fontSize: '0.9rem', color: '#444', marginTop: '0.25rem' }}>
-                                📄 {f.name}
-                                <button aria-label="Remove file" style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: 'red', cursor: 'pointer' }} onClick={() => setManualFiles(manualFiles.filter((_, j) => j !== i))}>×</button>
-                            </div>
-                        ))}
-                        <input type="file" accept={ACCEPTED_FILE_TYPES} onChange={(e) => { if (e.target.files[0]) { setManualFiles([...manualFiles, e.target.files[0]]); e.target.value = ''; } }} style={{ marginTop: '0.5rem' }} />
-                    </div>
-                    <div className="form-group">
-                        <label><strong>Receipts</strong> <span style={{ fontWeight: 'normal', fontSize: '0.85rem', color: '#666' }}>(images, PDF, TXT)</span></label>
-                        {receiptFiles.map((f, i) => (
-                            <div key={i} style={{ fontSize: '0.9rem', color: '#444', marginTop: '0.25rem' }}>
-                                🧾 {f.name}
-                                <button aria-label="Remove file" style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: 'red', cursor: 'pointer' }} onClick={() => setReceiptFiles(receiptFiles.filter((_, j) => j !== i))}>×</button>
-                            </div>
-                        ))}
-                        <input type="file" accept={ACCEPTED_FILE_TYPES} onChange={(e) => { if (e.target.files[0]) { setReceiptFiles([...receiptFiles, e.target.files[0]]); e.target.value = ''; } }} style={{ marginTop: '0.5rem' }} />
-                    </div>
                 </div>
                 <div className="modal-footer">
                     <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
                     <button
                         className="btn btn-primary"
-                        onClick={() => formData.name && onSave(formData, manualFiles, receiptFiles)}
+                        onClick={() => formData.name && onSave(formData)}
                         disabled={!formData.name}
                     >
                         Add Item
@@ -2954,9 +2914,6 @@ function AddInventoryModal({ onClose, onSave, data }) {
 function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTicket }) {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(item);
-    const [localReceipts, setLocalReceipts] = useState(item.receipts || []);
-    const [localManuals, setLocalManuals] = useState(item.manuals || []);
-    const [uploadError, setUploadError] = useState('');
 
     const relatedTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
     const openTickets = relatedTickets.filter(t => t.status !== 'closed');
@@ -2964,57 +2921,6 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
     const handleSave = () => {
         onUpdate(item.id, formData);
         setEditing(false);
-    };
-
-    const ACCEPTED_FILE_TYPES = '.jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.txt';
-
-    const handleDocUpload = async (e, docType) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        setUploadError('');
-        const formDataObj = new FormData();
-        formDataObj.append(docType, file);
-        try {
-            const res = await fetch(`/api/inventory/${item.id}/${docType}s`, {
-                method: 'POST',
-                body: formDataObj
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                setUploadError(text || 'Upload failed');
-                return;
-            }
-            const doc = await res.json();
-            if (docType === 'receipt') {
-                setLocalReceipts(prev => [...prev, doc]);
-            } else {
-                setLocalManuals(prev => [...prev, doc]);
-            }
-        } catch (err) {
-            setUploadError('Upload failed: ' + err.message);
-        }
-        e.target.value = '';
-    };
-
-    const handleDeleteDoc = async (docId, docType) => {
-        if (!window.confirm(`Delete this ${docType}?`)) return;
-        setUploadError('');
-        try {
-            const res = await fetch(`/api/inventory/${item.id}/documents/${docId}`, {
-                method: 'DELETE'
-            });
-            if (!res.ok) {
-                setUploadError('Delete failed');
-                return;
-            }
-            if (docType === 'receipt') {
-                setLocalReceipts(prev => prev.filter(d => d.id !== docId));
-            } else {
-                setLocalManuals(prev => prev.filter(d => d.id !== docId));
-            }
-        } catch (err) {
-            setUploadError('Delete failed: ' + err.message);
-        }
     };
 
     return (
@@ -3040,31 +2946,6 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                     <div><strong>Warranty Expires:</strong> {formatDate(item.warranty_expires)}</div>
                                 )}
                             </div>
-
-                            {(localReceipts.length > 0 || localManuals.length > 0) && (
-                                <div style={{ marginBottom: '2rem' }}>
-                                    {localManuals.length > 0 && (
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <strong>Manuals:</strong>
-                                            {localManuals.map(m => (
-                                                <div key={m.id} style={{ marginTop: '0.25rem' }}>
-                                                    <a href={m.url} target="_blank" rel="noopener noreferrer">{m.name}</a>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {localReceipts.length > 0 && (
-                                        <div>
-                                            <strong>Receipts:</strong>
-                                            {localReceipts.map(r => (
-                                                <div key={r.id} style={{ marginTop: '0.25rem' }}>
-                                                    <a href={r.url} target="_blank" rel="noopener noreferrer">{r.name}</a>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
 
                             <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Related Tickets</h3>
                             <div style={{ marginBottom: '1rem' }}>
@@ -3168,30 +3049,6 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                     onChange={(e) => setFormData({...formData, warranty_expires: e.target.value ? new Date(e.target.value).toISOString() : null})}
                                 />
                             </div>
-
-                            <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                                <label><strong>Manuals</strong></label>
-                                {localManuals.map(m => (
-                                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                        <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1 }}>{m.name}</a>
-                                        <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => handleDeleteDoc(m.id, 'manual')}>Delete</button>
-                                    </div>
-                                ))}
-                                <input type="file" accept={ACCEPTED_FILE_TYPES} onChange={(e) => handleDocUpload(e, 'manual')} style={{ marginTop: '0.5rem' }} />
-                            </div>
-
-                            <div className="form-group">
-                                <label><strong>Receipts</strong></label>
-                                {localReceipts.map(r => (
-                                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1 }}>{r.name}</a>
-                                        <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => handleDeleteDoc(r.id, 'receipt')}>Delete</button>
-                                    </div>
-                                ))}
-                                <input type="file" accept={ACCEPTED_FILE_TYPES} onChange={(e) => handleDocUpload(e, 'receipt')} style={{ marginTop: '0.5rem' }} />
-                            </div>
-
-                            {uploadError && <p style={{ color: 'red', fontSize: '0.9rem' }}>{uploadError}</p>}
                         </div>
                     )}
                 </div>
