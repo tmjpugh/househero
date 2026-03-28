@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
@@ -43,6 +45,47 @@ func (h *InventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		items = append(items, item)
+	}
+
+	// Batch-load documents for all items so the card can show counts/links.
+	if len(items) > 0 {
+		// Build a plain integer list (safe: all values come from the DB scan above).
+		ids := make([]string, len(items))
+		for i, it := range items {
+			ids[i] = strconv.FormatInt(it.ID, 10)
+		}
+		inClause := strings.Join(ids, ",")
+
+		// Build an index map for fast lookup.
+		itemIndex := make(map[int64]int, len(items))
+		for i, it := range items {
+			itemIndex[it.ID] = i
+		}
+
+		docRows, docErr := h.db.Query(
+			`SELECT inventory_item_id, id, doc_type, name, url, uploaded_at
+			 FROM documents
+			 WHERE inventory_item_id IN (` + inClause + `)
+			 ORDER BY uploaded_at`,
+		)
+		if docErr == nil {
+			defer docRows.Close()
+			for docRows.Next() {
+				var parentID int64
+				var doc models.Document
+				var docType string
+				if scanErr := docRows.Scan(&parentID, &doc.ID, &docType, &doc.Name, &doc.URL, &doc.UploadedAt); scanErr != nil {
+					continue
+				}
+				if idx, ok := itemIndex[parentID]; ok {
+					if docType == "manual" {
+						items[idx].Manuals = append(items[idx].Manuals, doc)
+					} else if docType == "receipt" {
+						items[idx].Receipts = append(items[idx].Receipts, doc)
+					}
+				}
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
