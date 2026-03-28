@@ -48,6 +48,10 @@ func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
 		tickets = append(tickets, ticket)
 	}
 
+	if tickets == nil {
+		tickets = []models.Ticket{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tickets)
 }
@@ -68,7 +72,6 @@ func (h *TicketHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 		&ticket.InventoryItemID, &ticket.InventoryItem, &ticket.EstimatedCost,
 		&ticket.Closer, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ClosedAt,
 	)
-
 	if err != nil {
 		http.Error(w, "Ticket not found", http.StatusNotFound)
 		return
@@ -111,20 +114,64 @@ func (h *TicketHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
-	var ticket models.Ticket
-	if err := json.NewDecoder(r.Body).Decode(&ticket); err != nil {
+	// Decode as map first to handle string/empty values
+	var data map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Convert inventory_item_id properly
+	var invItemID *int64
+	if invID, ok := data["inventory_item_id"]; ok && invID != nil {
+		switch v := invID.(type) {
+		case string:
+			if v != "" && v != "0" {
+				parsed, err := strconv.ParseInt(v, 10, 64)
+				if err == nil {
+					invItemID = &parsed
+				}
+			}
+		case float64:
+			if v != 0 {
+				id := int64(v)
+				invItemID = &id
+			}
+		}
+	}
+
+	// Convert string fields to pointers
+	var description *string
+	if desc, ok := data["description"].(string); ok && desc != "" {
+		description = &desc
+	}
+
+	var estimatedCost *string
+	if cost, ok := data["estimated_cost"].(string); ok && cost != "" {
+		estimatedCost = &cost
+	}
+
+	// Build the ticket
+	ticket := models.Ticket{
+		HomeID:          int64(data["home_id"].(float64)),
+		Title:           data["title"].(string),
+		Description:     description,
+		Type:            data["type"].(string),
+		Priority:        data["priority"].(string),
+		Status:          "open",
+		Requester:       data["requester"].(string),
+		Room:            data["room"].(string),
+		InventoryItemID: invItemID,
+		EstimatedCost:   estimatedCost,
+	}
+
 	err := h.db.QueryRow(
 		`INSERT INTO tickets (home_id, title, description, type, priority, status, requester, room, 
-		                       inventory_item_id, inventory_item, estimated_cost) 
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+		                       inventory_item_id, estimated_cost) 
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
 		 RETURNING id, created_at, updated_at`,
 		ticket.HomeID, ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
-		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID,
-		ticket.InventoryItem, ticket.EstimatedCost,
+		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID, ticket.EstimatedCost,
 	).Scan(&ticket.ID, &ticket.CreatedAt, &ticket.UpdatedAt)
 
 	if err != nil {
@@ -135,6 +182,17 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(ticket)
+}
+
+// Helper function
+func getStringOrEmpty(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {

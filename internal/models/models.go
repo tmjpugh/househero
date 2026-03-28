@@ -7,7 +7,7 @@ type Home struct {
 	UserID    int64     `json:"user_id"`
 	Name      string    `json:"name"`
 	Address   string    `json:"address"`
-	Photo     string    `json:"photo,omitempty"`
+	Photo     *string   `json:"photo,omitempty"`  // Can be NULL
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -16,19 +16,19 @@ type Ticket struct {
 	ID              int64     `json:"id"`
 	HomeID          int64     `json:"home_id"`
 	Title           string    `json:"title"`
-	Description     string    `json:"description,omitempty"`
+	Description     *string   `json:"description,omitempty"`  // Can be NULL
 	Type            string    `json:"type"`
 	Priority        string    `json:"priority"`
 	Status          string    `json:"status"`
 	Requester       string    `json:"requester"`
 	Room            string    `json:"room"`
-	InventoryItemID *int64    `json:"inventory_item_id,omitempty"`
-	InventoryItem   string    `json:"inventory_item,omitempty"`
-	EstimatedCost   string    `json:"estimated_cost,omitempty"`
-	Closer          string    `json:"closer,omitempty"`
+	InventoryItemID *int64    `json:"inventory_item_id,omitempty"`  // Already correct
+	InventoryItem   *string   `json:"inventory_item,omitempty"`  // Already correct
+	EstimatedCost   *string   `json:"estimated_cost,omitempty"`  // Can be NULL
+	Closer          *string   `json:"closer,omitempty"`  // Can be NULL
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
-	ClosedAt        *time.Time `json:"closed_at,omitempty"`
+	ClosedAt        *time.Time `json:"closed_at,omitempty"`  // Already correct
 	BlockedBy       []int64   `json:"blocked_by,omitempty"`
 	IsBlocking      []int64   `json:"is_blocking,omitempty"`
 	Comments        []Comment `json:"comments,omitempty"`
@@ -58,11 +58,11 @@ type InventoryItem struct {
 	Name            string     `json:"name"`
 	Type            string     `json:"type"`
 	Make            string     `json:"make"`
-	Model           string     `json:"model,omitempty"`
+	Model           *string    `json:"model,omitempty"`  // Can be NULL
 	Room            string     `json:"room"`
-	SerialNumber    string     `json:"serial_number,omitempty"`
-	PurchaseDate    *time.Time `json:"purchase_date,omitempty"`
-	WarrantyExpires *time.Time `json:"warranty_expires,omitempty"`
+	SerialNumber    *string    `json:"serial_number,omitempty"`  // Can be NULL
+	PurchaseDate    *time.Time `json:"purchase_date,omitempty"`  // Already correct
+	WarrantyExpires *time.Time `json:"warranty_expires,omitempty"`  // Already correct
 	Manuals         []Document `json:"manuals,omitempty"`
 	Receipts        []Document `json:"receipts,omitempty"`
 	Notes           []Note     `json:"notes,omitempty"`
