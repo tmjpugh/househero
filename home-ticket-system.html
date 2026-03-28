@@ -956,14 +956,14 @@ const dbApi = {
         return res.json();
     },
 
-    getSettings: async () => {
-        const res = await fetch('/api/settings');
+    getSettings: async (homeId) => {
+        const res = await fetch(`/api/homes/${homeId}/settings`);
         if (!res.ok) throw new Error('Failed to load settings');
         return res.json();
     },
 
-    updateSettings: async (settings) => {
-        const res = await fetch('/api/settings', {
+    updateSettings: async (homeId, settings) => {
+        const res = await fetch(`/api/homes/${homeId}/settings`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settings)
@@ -1029,33 +1029,39 @@ const dbApi = {
                 loadHomes();
             }, []);
 
-            // Load tickets & inventory when home changes
+            // Load tickets, inventory & per-home settings when home changes
             useEffect(() => {
                 if (currentHome) {
                     loadTickets();
                     loadInventory();
+                    loadSettings(currentHome);
                 }
             }, [currentHome]);
+
+            const loadSettings = async (homeId) => {
+                try {
+                    const settingsData = await dbApi.getSettings(homeId).catch(() => null);
+                    if (settingsData) {
+                        setData(prev => ({
+                            ...prev,
+                            settingsPassword: settingsData.settings_password || '1234',
+                            people:      settingsData.people      && settingsData.people.length      ? settingsData.people      : initialData.people,
+                            rooms:       settingsData.rooms       && settingsData.rooms.length       ? settingsData.rooms       : initialData.rooms,
+                            ticketTypes: settingsData.ticketTypes && settingsData.ticketTypes.length ? settingsData.ticketTypes : initialData.ticketTypes,
+                            makes:       settingsData.makes       && settingsData.makes.length       ? settingsData.makes       : initialData.makes,
+                            types:       settingsData.types       && settingsData.types.length       ? settingsData.types       : initialData.types,
+                        }));
+                    }
+                } catch (err) {
+                    // Non-fatal: keep current defaults
+                }
+            };
 
             const loadHomes = async () => {
                 try {
                     setLoading(true);
-                    const [homesData, settingsData] = await Promise.all([
-                        dbApi.getHomes(),
-                        dbApi.getSettings().catch(() => ({ settings_password: '1234' }))
-                    ]);
+                    const homesData = await dbApi.getHomes();
                     setHomes(homesData);
-                    if (settingsData) {
-                        setData(prev => ({
-                            ...prev,
-                            settingsPassword: settingsData.settings_password || prev.settingsPassword,
-                            people:      settingsData.people      && settingsData.people.length      ? settingsData.people      : prev.people,
-                            rooms:       settingsData.rooms       && settingsData.rooms.length       ? settingsData.rooms       : prev.rooms,
-                            ticketTypes: settingsData.ticketTypes && settingsData.ticketTypes.length ? settingsData.ticketTypes : prev.ticketTypes,
-                            makes:       settingsData.makes       && settingsData.makes.length       ? settingsData.makes       : prev.makes,
-                            types:       settingsData.types       && settingsData.types.length       ? settingsData.types       : prev.types,
-                        }));
-                    }
                     if (homesData.length > 0 && !currentHome) {
                         setCurrentHome(homesData[0].id);
                         setView('dashboard');
@@ -1265,6 +1271,13 @@ if (view === 'home-select') {
     return (
         <>
             <HomeSelector homes={homes} onSelectHome={(homeId) => {
+                // Reset per-home settings to defaults while the new home's settings load
+                setData(prev => ({
+                    ...prev,
+                    ...initialData,
+                    settingsPassword: '1234',
+                }));
+                setSettingsAuthenticated(false);
                 setCurrentHome(homeId);
                 setView('dashboard');
             }} onAddHome={() => {
@@ -1289,6 +1302,7 @@ if (view === 'home-select') {
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
                             <button className="btn btn-secondary" onClick={() => {
                                 setCurrentHome(null);
+                                setSettingsAuthenticated(false);
                                 setView('home-select');
                             }}>
                                 Change Home
@@ -2026,7 +2040,8 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
     const [success, setSuccess] = useState('');
 
     const persistCustomSettings = async (updatedData) => {
-        await dbApi.updateSettings({
+        if (!currentHome?.id) return;
+        await dbApi.updateSettings(currentHome.id, {
             settings_password: updatedData.settingsPassword,
             people:      updatedData.people      || [],
             rooms:       updatedData.rooms       || [],
@@ -2096,7 +2111,14 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout }) {
             try {
                 setLoading(true);
                 setError('');
-                await dbApi.updateSettings({ settings_password: newPassword.trim() });
+                await dbApi.updateSettings(currentHome.id, {
+                    settings_password: newPassword.trim(),
+                    people:      data.people      || [],
+                    rooms:       data.rooms       || [],
+                    ticketTypes: data.ticketTypes || [],
+                    makes:       data.makes       || [],
+                    types:       data.types       || [],
+                });
                 setData(prev => ({
                     ...prev,
                     settingsPassword: newPassword.trim()

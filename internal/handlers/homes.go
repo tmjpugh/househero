@@ -107,17 +107,19 @@ func (h *HomeHandler) CreateHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save settings_password if provided
+	// Create per-home settings row with a default password (or the one provided at creation)
+	initialPassword := "1234"
 	if req.SettingsPassword != "" {
-		if _, err := h.db.Exec(
-			`INSERT INTO user_settings (user_id, settings_password)
-			 VALUES ($1, $2)
-			 ON CONFLICT (user_id) DO UPDATE SET settings_password = $2, updated_at = CURRENT_TIMESTAMP`,
-			userID, req.SettingsPassword,
-		); err != nil {
-			http.Error(w, "Failed to save settings password", http.StatusInternalServerError)
-			return
-		}
+		initialPassword = req.SettingsPassword
+	}
+	if _, err := h.db.Exec(
+		`INSERT INTO home_settings (home_id, settings_password)
+		 VALUES ($1, $2)
+		 ON CONFLICT (home_id) DO NOTHING`,
+		home.ID, initialPassword,
+	); err != nil {
+		http.Error(w, "Failed to initialise home settings", http.StatusInternalServerError)
+		return
 	}
 
 	home.UserID, _ = strconv.ParseInt(userID, 10, 64)

@@ -66,9 +66,9 @@ func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
 	router.HandleFunc("/api/inventory/{id}/receipts", uploadHandler.UploadInventoryReceipt).Methods("POST")
 	router.HandleFunc("/api/inventory/{id}/manuals", uploadHandler.UploadInventoryManual).Methods("POST")
 
-	// Settings routes
-	router.HandleFunc("/api/settings", settingsHandler.GetSettings).Methods("GET")
-	router.HandleFunc("/api/settings", settingsHandler.UpdateSettings).Methods("PUT")
+	// Settings routes (per-home)
+	router.HandleFunc("/api/homes/{id}/settings", settingsHandler.GetSettings).Methods("GET")
+	router.HandleFunc("/api/homes/{id}/settings", settingsHandler.UpdateSettings).Methods("PUT")
 
 	return router
 }

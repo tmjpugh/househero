@@ -137,6 +137,15 @@ func (db *DB) RunMigrations() error {
 	CREATE INDEX IF NOT EXISTS idx_inventory_home_id ON inventory_items(home_id);
 
 	ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_settings TEXT;
+
+	CREATE TABLE IF NOT EXISTS home_settings (
+		id SERIAL PRIMARY KEY,
+		home_id INTEGER NOT NULL UNIQUE REFERENCES homes(id) ON DELETE CASCADE,
+		settings_password VARCHAR(255) NOT NULL DEFAULT '1234',
+		custom_settings TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 
 	_, err := db.Exec(migrationSQL)
