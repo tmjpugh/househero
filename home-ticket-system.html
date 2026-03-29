@@ -2348,7 +2348,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson }) {
             return (
                 <div className={`ticket-card priority-${ticket.priority} ${className}`} onClick={onClick}>
                     <div className="ticket-header">
@@ -2620,23 +2620,24 @@ function InventoryView({ inventory, tickets, sort, onSortChange, onNewItem, onSe
         );
     }
 
+    // Precompute ticket counts per item (used for sorting and card rendering)
+    const openCountByItemId = {};
+    const totalCountByItemId = {};
+    inventory.forEach(item => {
+        const itemTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
+        totalCountByItemId[item.id] = itemTickets.length;
+        openCountByItemId[item.id] = itemTickets.filter(t => t.status !== 'closed').length;
+    });
+
     const getSortedInventory = () => {
         const sorted = [...inventory];
         switch(sort) {
             case 'alpha':
                 return sorted.sort((a, b) => a.name.localeCompare(b.name));
             case 'tickets-desc':
-                return sorted.sort((a, b) => {
-                    const aCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === a.id && t.status !== 'closed').length;
-                    const bCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === b.id && t.status !== 'closed').length;
-                    return bCount - aCount;
-                });
+                return sorted.sort((a, b) => (openCountByItemId[b.id] || 0) - (openCountByItemId[a.id] || 0));
             case 'tickets-asc':
-                return sorted.sort((a, b) => {
-                    const aCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === a.id && t.status !== 'closed').length;
-                    const bCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === b.id && t.status !== 'closed').length;
-                    return aCount - bCount;
-                });
+                return sorted.sort((a, b) => (openCountByItemId[a.id] || 0) - (openCountByItemId[b.id] || 0));
             default:
                 return sorted;
         }
@@ -2667,8 +2668,9 @@ function InventoryView({ inventory, tickets, sort, onSortChange, onNewItem, onSe
 
             <div className="inventory-grid">
                 {sortedInventory.map(item => {
-                    const openTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id && t.status !== 'closed');
-                    const colorClass = getTicketCountColor(openTickets.length);
+                    const openCount = openCountByItemId[item.id] || 0;
+                    const totalCount = totalCountByItemId[item.id] || 0;
+                    const colorClass = getTicketCountColor(openCount);
 
                     return (
                         <div key={item.id} className={`inventory-card ${colorClass}`} onClick={() => onSelectItem(item.id)}>
@@ -2711,13 +2713,13 @@ function InventoryView({ inventory, tickets, sort, onSortChange, onNewItem, onSe
                                     </div>
                                 )}
                             </div>
-                            {openTickets.length > 0 && (
+                            {openCount > 0 && (
                                 <div style={{ marginBottom: '1rem' }}>
                                     <span className="badge" style={{ background: '#e0e7ff', color: '#4338ca', marginRight: '0.5rem' }}>
-                                        {openTickets.length} Open
+                                        {openCount} Open
                                     </span>
                                     <span className="badge" style={{ background: '#f0f0f0', color: '#666' }}>
-                                        {tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id).length - openTickets.length} Closed
+                                        {totalCount - openCount} Closed
                                     </span>
                                 </div>
                             )}
@@ -3102,8 +3104,6 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
             } finally {
                 setLoading(false);
             }
-        } else if (newPassword !== confirmPassword) {
-            setError('Passwords do not match');
         }
     };
 
@@ -3357,13 +3357,14 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                                     return;
                                 }
                                 if (!window.confirm(`Permanently delete ticket #${deleteTicketId}? This cannot be undone.`)) return;
+                                const ticketIdToDelete = deleteTicketId;
                                 try {
                                     setLoading(true);
                                     setError('');
-                                    await onDeleteTicket(parseInt(deleteTicketId));
+                                    await onDeleteTicket(parseInt(ticketIdToDelete));
                                     setDeleteTicketId('');
                                     setDeleteTicketPassword('');
-                                    setSuccess(`Ticket #${deleteTicketId} deleted.`);
+                                    setSuccess(`Ticket #${ticketIdToDelete} deleted.`);
                                     setTimeout(() => setSuccess(''), 3000);
                                 } catch (err) {
                                     setError('Failed to delete ticket: ' + err.message);
