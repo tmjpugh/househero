@@ -14,6 +14,7 @@ type Home struct {
 
 type Ticket struct {
 	ID              int64     `json:"id"`
+	TicketNumber    int64     `json:"ticket_number"`
 	HomeID          int64     `json:"home_id"`
 	Title           string    `json:"title"`
 	Description     *string   `json:"description,omitempty"`  // Can be NULL

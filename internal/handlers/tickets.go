@@ -23,7 +23,7 @@ func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
 	homeID := r.URL.Query().Get("home_id")
 
 	rows, err := h.db.Query(
-		`SELECT id, home_id, title, description, type, priority, status, requester, room, 
+		`SELECT id, ticket_number, home_id, title, description, type, priority, status, requester, room, 
 		        inventory_item_id, inventory_item, estimated_cost, closer, created_at, updated_at, closed_at 
 		 FROM tickets WHERE home_id = $1 ORDER BY created_at DESC`,
 		homeID,
@@ -39,7 +39,7 @@ func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var ticket models.Ticket
 		if err := rows.Scan(
-			&ticket.ID, &ticket.HomeID, &ticket.Title, &ticket.Description, &ticket.Type,
+			&ticket.ID, &ticket.TicketNumber, &ticket.HomeID, &ticket.Title, &ticket.Description, &ticket.Type,
 			&ticket.Priority, &ticket.Status, &ticket.Requester, &ticket.Room,
 			&ticket.InventoryItemID, &ticket.InventoryItem, &ticket.EstimatedCost,
 			&ticket.Closer, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ClosedAt,
@@ -87,12 +87,12 @@ func (h *TicketHandler) GetTicket(w http.ResponseWriter, r *http.Request) {
 
 	var ticket models.Ticket
 	err := h.db.QueryRow(
-		`SELECT id, home_id, title, description, type, priority, status, requester, room,
+		`SELECT id, ticket_number, home_id, title, description, type, priority, status, requester, room,
 		        inventory_item_id, inventory_item, estimated_cost, closer, created_at, updated_at, closed_at 
 		 FROM tickets WHERE id = $1`,
 		ticketID,
 	).Scan(
-		&ticket.ID, &ticket.HomeID, &ticket.Title, &ticket.Description, &ticket.Type,
+		&ticket.ID, &ticket.TicketNumber, &ticket.HomeID, &ticket.Title, &ticket.Description, &ticket.Type,
 		&ticket.Priority, &ticket.Status, &ticket.Requester, &ticket.Room,
 		&ticket.InventoryItemID, &ticket.InventoryItem, &ticket.EstimatedCost,
 		&ticket.Closer, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ClosedAt,
@@ -192,13 +192,14 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(
-		`INSERT INTO tickets (home_id, title, description, type, priority, status, requester, room, 
+		`INSERT INTO tickets (home_id, ticket_number, title, description, type, priority, status, requester, room, 
 		                       inventory_item_id, estimated_cost) 
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-		 RETURNING id, created_at, updated_at`,
+		 VALUES ($1, (SELECT COALESCE(MAX(ticket_number), 0) + 1 FROM tickets WHERE home_id = $1),
+		         $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+		 RETURNING id, ticket_number, created_at, updated_at`,
 		ticket.HomeID, ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
 		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID, ticket.EstimatedCost,
-	).Scan(&ticket.ID, &ticket.CreatedAt, &ticket.UpdatedAt)
+	).Scan(&ticket.ID, &ticket.TicketNumber, &ticket.CreatedAt, &ticket.UpdatedAt)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -264,9 +265,21 @@ func (h *TicketHandler) DeleteTicket(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ticketID := vars["id"]
 
-	_, err := h.db.Exec("DELETE FROM tickets WHERE id = $1", ticketID)
+	homeID := r.URL.Query().Get("home_id")
+	if homeID == "" {
+		http.Error(w, "home_id query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.db.Exec("DELETE FROM tickets WHERE id = $1 AND home_id = $2", ticketID, homeID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		http.Error(w, "Ticket not found in this home", http.StatusNotFound)
 		return
 	}
 

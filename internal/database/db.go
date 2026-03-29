@@ -173,5 +173,38 @@ func (db *DB) RunMigrations() error {
 		  WHERE user_settings.settings_password IS NULL
 		     OR user_settings.settings_password = ''
 	`)
+	if err != nil {
+		return err
+	}
+
+	// Add per-home ticket_number column and backfill existing rows.
+	_, err = db.Exec(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_number INTEGER`)
+	if err != nil {
+		return err
+	}
+
+	// Backfill ticket_number for any rows that don't have one yet (NULL), assigning
+	// sequential numbers per home ordered by created_at then id.
+	_, err = db.Exec(`
+		UPDATE tickets t
+		SET ticket_number = sub.rn
+		FROM (
+			SELECT id,
+			       ROW_NUMBER() OVER (PARTITION BY home_id ORDER BY created_at, id) AS rn
+			FROM tickets
+		) sub
+		WHERE t.id = sub.id AND t.ticket_number IS NULL
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Make ticket_number NOT NULL and unique within a home going forward.
+	_, err = db.Exec(`ALTER TABLE tickets ALTER COLUMN ticket_number SET NOT NULL`)
+	if err != nil {
+		// Ignore if already NOT NULL
+		log.Printf("Note: ticket_number NOT NULL constraint: %v", err)
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_tickets_home_number ON tickets(home_id, ticket_number)`)
 	return err
 }
