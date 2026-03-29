@@ -284,8 +284,8 @@ func (h *UploadHandler) isValidFileType(filename string, uploadType string) bool
 	validTypes := map[string][]string{
 		"photo":    {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"},
 		"document": {".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"},
-		"receipt":  {".pdf", ".jpg", ".jpeg", ".png", ".gif"},
-		"manual":   {".pdf", ".doc", ".docx", ".txt", ".png", ".jpg", ".jpeg"},
+		"receipt":  {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".txt"},
+		"manual":   {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".txt"},
 	}
 
 	allowed, exists := validTypes[uploadType]

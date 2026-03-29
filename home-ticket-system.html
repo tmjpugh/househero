@@ -3131,24 +3131,18 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 )}
                             </div>
 
-                            {/* Documents section */}
+                            {/* Documents section - read-only in details view */}
                             <h3 style={{ marginBottom: '0.75rem' }}>Documents</h3>
-                            {docError && <div style={{ color: '#dc2626', marginBottom: '0.5rem', fontSize: '0.875rem' }}>{docError}</div>}
 
                             {/* Manuals */}
                             <div style={{ marginBottom: '1rem' }}>
                                 <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>📄 Manuals</div>
                                 {localManuals.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No manuals uploaded yet.</p>}
                                 {localManuals.map(doc => (
-                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                    <div key={doc.id} style={{ padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
                                         <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
-                                        <button onClick={() => handleDeleteDoc(doc.id, 'manual')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
                                     </div>
                                 ))}
-                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
-                                    {uploading ? 'Uploading…' : '+ Add Manual'}
-                                    <input type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'manual')} />
-                                </label>
                             </div>
 
                             {/* Receipts */}
@@ -3156,15 +3150,10 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>🧾 Receipts</div>
                                 {localReceipts.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No receipts uploaded yet.</p>}
                                 {localReceipts.map(doc => (
-                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                    <div key={doc.id} style={{ padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
                                         <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
-                                        <button onClick={() => handleDeleteDoc(doc.id, 'receipt')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
                                     </div>
                                 ))}
-                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
-                                    {uploading ? 'Uploading…' : '+ Add Receipt'}
-                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'receipt')} />
-                                </label>
                             </div>
 
                             <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Related Tickets</h3>
@@ -3268,6 +3257,42 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                     value={formData.warranty_expires ? formData.warranty_expires.split('T')[0] : ''}
                                     onChange={(e) => setFormData({...formData, warranty_expires: e.target.value ? new Date(e.target.value).toISOString() : null})}
                                 />
+                            </div>
+
+                            {/* Documents section - editable in edit view */}
+                            <h3 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>Documents</h3>
+                            {docError && <div style={{ color: '#dc2626', marginBottom: '0.5rem', fontSize: '0.875rem' }}>{docError}</div>}
+
+                            {/* Manuals */}
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>📄 Manuals</div>
+                                {localManuals.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No manuals uploaded yet.</p>}
+                                {localManuals.map(doc => (
+                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                        <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
+                                        <button onClick={() => handleDeleteDoc(doc.id, 'manual')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
+                                    </div>
+                                ))}
+                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
+                                    {uploading ? 'Uploading…' : '+ Add Manual'}
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'manual')} />
+                                </label>
+                            </div>
+
+                            {/* Receipts */}
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>🧾 Receipts</div>
+                                {localReceipts.length === 0 && <p style={{ color: '#888', fontSize: '0.875rem' }}>No receipts uploaded yet.</p>}
+                                {localReceipts.map(doc => (
+                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #eee' }}>
+                                        <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '0.9rem' }}>{doc.name}</a>
+                                        <button onClick={() => handleDeleteDoc(doc.id, 'receipt')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', padding: '0 0.25rem' }} title="Remove">✕</button>
+                                    </div>
+                                ))}
+                                <label style={{ display: 'inline-block', marginTop: '0.5rem', cursor: uploading ? 'not-allowed' : 'pointer', color: uploading ? '#aaa' : '#4f46e5', fontSize: '0.875rem' }}>
+                                    {uploading ? 'Uploading…' : '+ Add Receipt'}
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt" style={{ display: 'none' }} disabled={uploading} onChange={(e) => handleUpload(e, 'receipt')} />
+                                </label>
                             </div>
                         </div>
                     )}
