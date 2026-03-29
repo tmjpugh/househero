@@ -275,24 +275,27 @@
         /* Filters */
         .filters {
             background: white;
-            padding: 1rem;
+            padding: 1rem 1.25rem;
             border-radius: 12px;
             margin-bottom: 1.5rem;
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 0.75rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.35rem;
         }
 
-        .filter-group label {
-            font-size: 0.85rem;
-            color: #666;
+        .filter-group > label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         .filter-group select,
@@ -301,6 +304,69 @@
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 0.95rem;
+        }
+
+        .radio-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-option label {
+            padding: 0.3rem 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            background: #f9fafb;
+            color: #374151;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .radio-option label:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .radio-option input[type="radio"]:checked + label:hover {
+            color: white;
+        }
+
+        .filters-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filters-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .filter-divider {
+            border: none;
+            border-top: 1px solid #f0f0f0;
+            margin: 0.1rem 0;
         }
 
         /* Ticket List */
@@ -827,8 +893,8 @@
                 grid-template-columns: 1fr;
             }
 
-            .filters {
-                flex-direction: column;
+            .radio-options {
+                gap: 0.3rem;
             }
 
             .ticket-meta {
@@ -1049,6 +1115,7 @@ const dbApi = {
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
             const [roomSort, setRoomSort] = useState('alpha');
+            const [ticketSort, setTicketSort] = useState('newest');
 
             // Load homes on mount
             useEffect(() => {
@@ -1261,6 +1328,22 @@ const addHome = async (home) => {
                 if (filters.type !== 'all' && ticket.type !== filters.type) return false;
                 if (filters.room !== 'all' && ticket.room !== filters.room) return false;
                 return true;
+            }).slice().sort((a, b) => {
+                const priorityOrder = { high: 0, medium: 1, low: 2 };
+                const statusOrder = { open: 0, 'in-progress': 1, waiting: 2, blocking: 3, closed: 4 };
+                switch (ticketSort) {
+                    case 'oldest':
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    case 'priority-desc':
+                        return (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
+                    case 'priority-asc':
+                        return (priorityOrder[b.priority] ?? 99) - (priorityOrder[a.priority] ?? 99);
+                    case 'status':
+                        return (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+                    case 'newest':
+                    default:
+                        return new Date(b.created_at) - new Date(a.created_at);
+                }
             });
 
             const stats = {
@@ -1415,6 +1498,8 @@ if (view === 'home-select') {
                                     tickets={filteredTickets}
                                     filters={filters}
                                     onFilterChange={setFilters}
+                                    sort={ticketSort}
+                                    onSortChange={setTicketSort}
                                     data={data}
                                     onNewTicket={() => setShowModal('add-ticket')}
                                     onTicketClick={(ticket) => {
@@ -1695,7 +1780,24 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function TicketsView({ tickets, filters, onFilterChange, sort, onSortChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+            const makeRadio = (name, value, label, current, onChange) => {
+                const id = `radio-${name}-${value}`;
+                return (
+                    <div className="radio-option" key={value}>
+                        <input
+                            type="radio"
+                            id={id}
+                            name={name}
+                            value={value}
+                            checked={current === value}
+                            onChange={() => onChange(value)}
+                        />
+                        <label htmlFor={id}>{label}</label>
+                    </div>
+                );
+            };
+
             return (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -1708,42 +1810,49 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     <div className="filters">
                         <div className="filter-group">
                             <label>Status</label>
-                            <select value={filters.status} onChange={(e) => onFilterChange({...filters, status: e.target.value})}>
-                                <option value="all">All</option>
-                                <option value="open">Open</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="waiting">Waiting</option>
-                                <option value="blocking">Blocking</option>
-                                <option value="closed">Closed</option>
-                            </select>
+                            <div className="radio-options">
+                                {makeRadio('status', 'all', 'All', filters.status, v => onFilterChange({...filters, status: v}))}
+                                {makeRadio('status', 'open', 'Open', filters.status, v => onFilterChange({...filters, status: v}))}
+                                {makeRadio('status', 'in-progress', 'In Progress', filters.status, v => onFilterChange({...filters, status: v}))}
+                                {makeRadio('status', 'waiting', 'Waiting', filters.status, v => onFilterChange({...filters, status: v}))}
+                                {makeRadio('status', 'blocking', 'Blocking', filters.status, v => onFilterChange({...filters, status: v}))}
+                                {makeRadio('status', 'closed', 'Closed', filters.status, v => onFilterChange({...filters, status: v}))}
+                            </div>
                         </div>
+                        <hr className="filter-divider" />
                         <div className="filter-group">
                             <label>Priority</label>
-                            <select value={filters.priority} onChange={(e) => onFilterChange({...filters, priority: e.target.value})}>
-                                <option value="all">All</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
+                            <div className="radio-options">
+                                {makeRadio('priority', 'all', 'All', filters.priority, v => onFilterChange({...filters, priority: v}))}
+                                {makeRadio('priority', 'high', 'High', filters.priority, v => onFilterChange({...filters, priority: v}))}
+                                {makeRadio('priority', 'medium', 'Medium', filters.priority, v => onFilterChange({...filters, priority: v}))}
+                                {makeRadio('priority', 'low', 'Low', filters.priority, v => onFilterChange({...filters, priority: v}))}
+                            </div>
                         </div>
+                        <hr className="filter-divider" />
                         <div className="filter-group">
                             <label>Type</label>
-                            <select value={filters.type} onChange={(e) => onFilterChange({...filters, type: e.target.value})}>
-                                <option value="all">All Types</option>
-                                {data.ticketTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
+                            <div className="radio-options">
+                                {makeRadio('type', 'all', 'All Types', filters.type, v => onFilterChange({...filters, type: v}))}
+                                {data.ticketTypes.map(type => makeRadio('type', type, type, filters.type, v => onFilterChange({...filters, type: v})))}
+                            </div>
                         </div>
+                        <hr className="filter-divider" />
                         <div className="filter-group">
                             <label>Room</label>
-                            <select value={filters.room} onChange={(e) => onFilterChange({...filters, room: e.target.value})}>
-                                <option value="all">All Rooms</option>
-                                {data.rooms.map(room => (
-                                    <option key={room} value={room}>{room}</option>
-                                ))}
-                            </select>
+                            <div className="radio-options">
+                                {makeRadio('room', 'all', 'All Rooms', filters.room, v => onFilterChange({...filters, room: v}))}
+                                {data.rooms.map(room => makeRadio('room', room, room, filters.room, v => onFilterChange({...filters, room: v})))}
+                            </div>
                         </div>
+                    </div>
+
+                    <div className="sort-controls">
+                        <button className={`sort-btn ${sort === 'newest' ? 'active' : ''}`} onClick={() => onSortChange('newest')}>📅 Newest First</button>
+                        <button className={`sort-btn ${sort === 'oldest' ? 'active' : ''}`} onClick={() => onSortChange('oldest')}>📅 Oldest First</button>
+                        <button className={`sort-btn ${sort === 'priority-desc' ? 'active' : ''}`} onClick={() => onSortChange('priority-desc')}>🔽 Priority High→Low</button>
+                        <button className={`sort-btn ${sort === 'priority-asc' ? 'active' : ''}`} onClick={() => onSortChange('priority-asc')}>🔼 Priority Low→High</button>
+                        <button className={`sort-btn ${sort === 'status' ? 'active' : ''}`} onClick={() => onSortChange('status')}>📋 Status</button>
                     </div>
 
                     <div className="ticket-list">
