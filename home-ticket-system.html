@@ -1403,6 +1403,24 @@ const dbApi = {
                 }
             }, [currentHome]);
 
+            // Refresh tickets and inventory silently whenever the active view or home changes
+            useEffect(() => {
+                if (currentHome && view !== 'home-select') {
+                    dbApi.getTickets(currentHome).then(d => setTickets(d || [])).catch(() => {});
+                    dbApi.getInventory(currentHome).then(d => setInventory(d || [])).catch(() => {});
+                }
+            }, [view, currentHome]);
+
+            // Background polling: refresh tickets and inventory every 30 seconds
+            useEffect(() => {
+                if (!currentHome) return;
+                const interval = setInterval(() => {
+                    dbApi.getTickets(currentHome).then(d => setTickets(d || [])).catch(() => {});
+                    dbApi.getInventory(currentHome).then(d => setInventory(d || [])).catch(() => {});
+                }, 30000);
+                return () => clearInterval(interval);
+            }, [currentHome]);
+
             const loadSettings = async (homeId) => {
                 try {
                     const settingsData = await dbApi.getSettings(homeId).catch(() => null);
@@ -1710,6 +1728,9 @@ if (view === 'home-select') {
                                 {sidebarOpen ? '✕' : '☰'}
                             </button>
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
+                            <button className="search-icon-btn" onClick={() => setShowModal('add-ticket')} title="New Ticket" style={{ fontSize: '1.4rem' }}>
+                                ＋
+                            </button>
                             <button className="search-icon-btn" onClick={() => { setSearchOpen(true); setSearchQuery(''); }} title="Search">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <circle cx="11" cy="11" r="8"/>
@@ -1775,6 +1796,7 @@ if (view === 'home-select') {
                                 <DashboardView 
                                     stats={stats} 
                                     tickets={currentTickets}
+                                    inventory={currentInventory}
                                     home={currentHomeData}
                                     onNewTicket={() => setShowModal('add-ticket')}
                                     onTicketClick={(ticket) => {
@@ -1815,6 +1837,7 @@ if (view === 'home-select') {
                                     filters={filters}
                                     onFilterChange={setFilters}
                                     data={data}
+                                    inventory={currentInventory}
                                     onNewTicket={() => setShowModal('add-ticket')}
                                     onTicketClick={(ticket) => {
                                         setModalData(ticket);
@@ -1914,6 +1937,8 @@ if (view === 'home-select') {
                                     }}
                                     onDeleteHome={deleteHomeAction}
                                     onDeleteTicket={deleteTicketAction}
+                                    tickets={currentTickets}
+                                    homes={homes}
                                 />
                             )}
                         </main>
@@ -1962,6 +1987,16 @@ if (view === 'home-select') {
                                 setView('inventory');
                             }}
                             allTickets={currentTickets}
+                            onNavigateRoom={(room) => {
+                                setShowModal(null);
+                                setSelectedRoom(room);
+                                setView('rooms');
+                            }}
+                            onNavigatePerson={(person) => {
+                                setShowModal(null);
+                                setSelectedPerson(person);
+                                setView('people');
+                            }}
                         />
                     )}
 
@@ -2129,7 +2164,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
     );
 }
 
-        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory, onNavigateTickets, onChangeHome }) {
+        function DashboardView({ stats, tickets, inventory, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory, onNavigateTickets, onChangeHome }) {
             const recentTickets = tickets.slice(-5).reverse();
 
             return (
@@ -2204,6 +2239,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                 onNavigateRoom={onNavigateRoom}
                                 onNavigatePerson={onNavigatePerson}
                                 onNavigateInventory={onNavigateInventory}
+                                inventory={inventory}
                             />
                         ))}
                     </div>
@@ -2291,7 +2327,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function TicketsView({ tickets, filters, onFilterChange, data, inventory, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
             return (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -2348,6 +2384,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                 onNavigateRoom={onNavigateRoom}
                                 onNavigatePerson={onNavigatePerson}
                                 onNavigateInventory={onNavigateInventory}
+                                inventory={inventory}
                             />
                         ))}
                         {tickets.length === 0 && (
@@ -2360,7 +2397,19 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson }) {
+        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory, inventory }) {
+            const inventoryItemName = ticket.inventory_item ||
+                (ticket.inventory_item_id && inventory
+                    ? (inventory.find(i => i.id === ticket.inventory_item_id || i.id === parseInt(ticket.inventory_item_id)) || {}).name
+                    : null);
+            const comments = ticket.comments || [];
+            const commentCount = comments.length;
+            const latestComment = commentCount > 0
+                ? comments.reduce((a, b) => new Date(a.timestamp) > new Date(b.timestamp) ? a : b)
+                : null;
+            const latestCommentDate = latestComment ? new Date(latestComment.timestamp) : null;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const isRecentComment = latestCommentDate && latestCommentDate > sevenDaysAgo;
             return (
                 <div className={`ticket-card priority-${ticket.priority} ${className}`} onClick={onClick}>
                     <div className="ticket-header">
@@ -2376,7 +2425,12 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                     e.stopPropagation();
                                     onNavigatePerson && onNavigatePerson(ticket.requester);
                                 }}>{ticket.requester}</span></span>
-                                {ticket.inventory_item && <span>📦 {ticket.inventory_item}</span>}
+                                {inventoryItemName && (
+                                    <span>📦 <span className="clickable-field" onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigateInventory && onNavigateInventory({ id: ticket.inventory_item_id, name: inventoryItemName });
+                                    }}>{inventoryItemName}</span></span>
+                                )}
                             </div>
                         </div>
                         <div>
@@ -2386,7 +2440,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
                         {ticket.description?.substring(0, 100)}{ticket.description?.length > 100 ? '...' : ''}
                     </div>
-                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
                             {ticket.type}
                         </span>
@@ -2396,6 +2450,20 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                         {ticket.estimated_cost && (
                             <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>
                                 {formatCurrency(ticket.estimated_cost)}
+                            </span>
+                        )}
+                        {commentCount > 0 && (
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                color: isRecentComment ? '#b45309' : '#666',
+                                fontWeight: isRecentComment ? '600' : 'normal',
+                                background: isRecentComment ? '#fef3c7' : 'transparent',
+                                borderRadius: '4px',
+                                padding: isRecentComment ? '0.1rem 0.35rem' : '0',
+                            }}>
+                                💬 {commentCount} · {formatDate(latestComment.timestamp)}
                             </span>
                         )}
                         <span style={{ color: '#666', marginLeft: 'auto' }}>
@@ -3007,7 +3075,7 @@ function RoomsView({ rooms, tickets, inventory, sort, onSortChange, onTicketClic
             );
         }
 
-function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDeleteHome, onDeleteTicket }) {
+function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDeleteHome, onDeleteTicket, tickets, homes }) {
     const [newPerson, setNewPerson] = useState('');
     const [newRoom, setNewRoom] = useState('');
     const [newType, setNewType] = useState('');
@@ -3022,6 +3090,13 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [homeName, setHomeName] = useState(currentHome?.name || '');
+    const [homeAddress, setHomeAddress] = useState(currentHome?.address || '');
+
+    useEffect(() => {
+        setHomeName(currentHome?.name || '');
+        setHomeAddress(currentHome?.address || '');
+    }, [currentHome?.id, currentHome?.name, currentHome?.address]);
 
     const persistCustomSettings = async (updatedData) => {
         if (!currentHome?.id) return;
@@ -3090,6 +3165,24 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
         }
     };
 
+    const updateHomeInfo = async () => {
+        if (!homeName.trim()) {
+            setError('Home name cannot be empty');
+            return;
+        }
+        try {
+            setLoading(true);
+            setError('');
+            await onUpdateHome({ name: homeName.trim(), address: homeAddress.trim() });
+            setSuccess('Home info updated successfully');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setError('Failed to update home info');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const updatePassword = async () => {
         if (newPassword.trim() && newPassword === confirmPassword) {
             try {
@@ -3149,6 +3242,10 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
         }
     };
 
+    const selectedDeleteTicket = deleteTicketId && tickets
+        ? tickets.find(t => t.ticket_number === parseInt(deleteTicketId))
+        : null;
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -3192,6 +3289,34 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                 </div>
             </div>
 
+            <div className="room-section" style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Home Info</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                    <input
+                        type="text"
+                        value={homeName}
+                        onChange={(e) => setHomeName(e.target.value)}
+                        placeholder="Home name..."
+                        style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                    />
+                    <input
+                        type="text"
+                        value={homeAddress}
+                        onChange={(e) => setHomeAddress(e.target.value)}
+                        placeholder="Home address..."
+                        style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                    />
+                    <button
+                        className="btn btn-primary"
+                        onClick={updateHomeInfo}
+                        disabled={loading || !homeName.trim()}
+                        style={{ alignSelf: 'flex-start' }}
+                    >
+                        Save Home Info
+                    </button>
+                </div>
+            </div>
+
             <div className="room-section">
                 <h3 style={{ marginBottom: '1rem' }}>Home Photo</h3>
                 {currentHome?.photo && (
@@ -3216,7 +3341,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(data.people || []).map(person => (
+                    {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(person => (
                         <span key={person} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
                               onClick={() => removeItem('people', person)}>
                             {person} ×
@@ -3241,7 +3366,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(data.rooms || []).map(room => (
+                    {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(room => (
                         <span key={room} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
                               onClick={() => removeItem('rooms', room)}>
                             {room} ×
@@ -3266,7 +3391,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(data.ticketTypes || []).map(type => (
+                    {(data.ticketTypes || []).slice().sort((a, b) => a.localeCompare(b)).map(type => (
                         <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
                               onClick={() => removeItem('ticketTypes', type)}>
                             {type} ×
@@ -3291,7 +3416,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(data.makes || []).map(make => (
+                    {(data.makes || []).slice().sort((a, b) => a.localeCompare(b)).map(make => (
                         <span key={make} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
                               onClick={() => removeItem('makes', make)}>
                             {make} ×
@@ -3316,7 +3441,7 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(data.types || []).map(type => (
+                    {(data.types || []).slice().sort((a, b) => a.localeCompare(b)).map(type => (
                         <span key={type} className="badge" style={{ background: '#e0e7ff', color: '#4338ca', cursor: 'pointer', padding: '0.5rem 0.75rem' }}
                               onClick={() => removeItem('types', type)}>
                             {type} ×
@@ -3343,15 +3468,34 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
 
                 <div style={{ marginBottom: '1.5rem' }}>
                     <h4 style={{ marginBottom: '0.75rem' }}>Delete Ticket</h4>
-                    <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.75rem' }}>Enter the ticket number and current password to permanently delete a ticket.</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '320px' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.75rem' }}>Select or enter a ticket number, then provide the current password to permanently delete a ticket.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                        {tickets && tickets.length > 0 && (
+                            <select
+                                value={deleteTicketId}
+                                onChange={(e) => setDeleteTicketId(e.target.value)}
+                                style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                            >
+                                <option value="">-- Select a ticket --</option>
+                                {tickets.slice().sort((a, b) => a.ticket_number - b.ticket_number).map(t => (
+                                    <option key={t.id} value={t.ticket_number}>
+                                        #{t.ticket_number} – {t.title}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                         <input
                             type="number"
                             value={deleteTicketId}
                             onChange={(e) => setDeleteTicketId(e.target.value)}
-                            placeholder="Ticket number..."
+                            placeholder="Or enter ticket number..."
                             style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
                         />
+                        {deleteTicketId && selectedDeleteTicket && (
+                            <div style={{ fontSize: '0.875rem', color: '#374151', background: '#f3f4f6', padding: '0.5rem', borderRadius: '6px' }}>
+                                #{selectedDeleteTicket.ticket_number} – {selectedDeleteTicket.title}
+                            </div>
+                        )}
                         <input
                             type="password"
                             value={deleteTicketPassword}
@@ -3393,7 +3537,12 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                 <div>
                     <h4 style={{ marginBottom: '0.75rem' }}>Delete Home</h4>
                     <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.75rem' }}>Enter the current password to permanently delete this home and all its data.</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '320px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '400px' }}>
+                        {homes && homes.length > 0 && (
+                            <div style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', background: '#f9fafb', fontSize: '0.9rem', color: '#374151' }}>
+                                {currentHome?.name}{currentHome?.address ? ` – ${currentHome.address}` : ''}
+                            </div>
+                        )}
                         <input
                             type="password"
                             value={deleteHomePassword}
@@ -3728,7 +3877,11 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                             <label>Inventory Item (optional)</label>
                             <select 
                                 value={formData.inventory_item_id} 
-                                onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
+                                onChange={(e) => {
+                                    const selectedId = e.target.value;
+                                    const selectedItem = inventory && inventory.find(i => String(i.id) === selectedId);
+                                    setFormData({...formData, inventory_item_id: selectedId, inventory_item: selectedItem ? selectedItem.name : null});
+                                }}
                             >
                                 <option value="">-- Select Item --</option>
                                 {inventory && inventory.length > 0 ? (
@@ -3775,7 +3928,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
     );
 }
 
-function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets }) {
+function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, inventory, onViewInventory, allTickets, onNavigateRoom, onNavigatePerson }) {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(ticket);
     const [newComment, setNewComment] = useState('');
@@ -3785,6 +3938,11 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
         if (!ticket.inventory_item_id || !inventory) return null;
         const item = inventory.find(i => i.id === ticket.inventory_item_id);
         return item ? item.name : null;
+    };
+
+    const handleNavigateInventory = () => {
+        const item = inventory && inventory.find(i => i.id === ticket.inventory_item_id);
+        if (item) { onClose(); onViewInventory && onViewInventory(item); }
     };
 
     const handleSave = () => {
@@ -3852,9 +4010,11 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                             </div>
                             <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
                                 <div><strong>Type:</strong> {ticket.type}</div>
-                                <div><strong>Requester:</strong> {ticket.requester}</div>
-                                <div><strong>Room:</strong> {ticket.room}</div>
-                                {inventoryItemName && <div><strong>Inventory Item:</strong> {inventoryItemName}</div>}
+                                <div>👤 <strong>Requester:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigatePerson && onNavigatePerson(ticket.requester); }}>{ticket.requester}</span></div>
+                                <div>📍 <strong>Room:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigateRoom && onNavigateRoom(ticket.room); }}>{ticket.room}</span></div>
+                                {inventoryItemName && (
+                                    <div>📦 <strong>Inventory Item:</strong> <span className="clickable-field" onClick={handleNavigateInventory}>{inventoryItemName}</span></div>
+                                )}
                                 {ticket.estimated_cost && <div><strong>Cost:</strong> {formatCurrency(ticket.estimated_cost)}</div>}
                                 <div><strong>Created:</strong> {formatDate(ticket.created_at)}</div>
                             </div>
@@ -3943,6 +4103,16 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     </select>
                                 </div>
                                 <div className="form-group">
+                                    <label>Type</label>
+                                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                                        {(data.ticketTypes || []).slice().sort((a, b) => a.localeCompare(b)).map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
                                     <label>Room</label>
                                     <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
                                         {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => (
@@ -3968,7 +4138,11 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <label>Inventory Item (optional)</label>
                                     <select 
                                         value={formData.inventory_item_id || ''} 
-                                        onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value ? parseInt(e.target.value) : null})}
+                                        onChange={(e) => {
+                                            const selectedId = e.target.value ? parseInt(e.target.value) : null;
+                                            const selectedItem = inventory && inventory.find(i => i.id === selectedId);
+                                            setFormData({...formData, inventory_item_id: selectedId, inventory_item: selectedItem ? selectedItem.name : null});
+                                        }}
                                     >
                                         <option value="">-- Select Item --</option>
                                         {inventory && inventory.length > 0 ? (

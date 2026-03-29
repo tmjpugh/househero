@@ -193,9 +193,11 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
 	err := h.db.QueryRow(
 		`INSERT INTO tickets (home_id, ticket_number, title, description, type, priority, status, requester, room, 
-		                       inventory_item_id, estimated_cost) 
+		                       inventory_item_id, inventory_item, estimated_cost) 
 		 VALUES ($1, (SELECT COALESCE(MAX(ticket_number), 0) + 1 FROM tickets WHERE home_id = $1),
-		         $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+		         $2, $3, $4, $5, $6, $7, $8, $9,
+		         (SELECT name FROM inventory_items WHERE id = $9),
+		         $10) 
 		 RETURNING id, ticket_number, created_at, updated_at`,
 		ticket.HomeID, ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
 		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID, ticket.EstimatedCost,
