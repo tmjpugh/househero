@@ -2402,6 +2402,14 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                 (ticket.inventory_item_id && inventory
                     ? (inventory.find(i => i.id === ticket.inventory_item_id || i.id === parseInt(ticket.inventory_item_id)) || {}).name
                     : null);
+            const comments = ticket.comments || [];
+            const commentCount = comments.length;
+            const latestComment = commentCount > 0
+                ? comments.reduce((a, b) => new Date(a.timestamp) > new Date(b.timestamp) ? a : b)
+                : null;
+            const latestCommentDate = latestComment ? new Date(latestComment.timestamp) : null;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const isRecentComment = latestCommentDate && latestCommentDate > sevenDaysAgo;
             return (
                 <div className={`ticket-card priority-${ticket.priority} ${className}`} onClick={onClick}>
                     <div className="ticket-header">
@@ -2432,7 +2440,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
                         {ticket.description?.substring(0, 100)}{ticket.description?.length > 100 ? '...' : ''}
                     </div>
-                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', fontSize: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span className="badge" style={{ background: '#f3f4f6', color: '#374151' }}>
                             {ticket.type}
                         </span>
@@ -2442,6 +2450,20 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                         {ticket.estimated_cost && (
                             <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>
                                 {formatCurrency(ticket.estimated_cost)}
+                            </span>
+                        )}
+                        {commentCount > 0 && (
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                color: isRecentComment ? '#b45309' : '#666',
+                                fontWeight: isRecentComment ? '600' : 'normal',
+                                background: isRecentComment ? '#fef3c7' : 'transparent',
+                                borderRadius: '4px',
+                                padding: isRecentComment ? '0.1rem 0.35rem' : '0',
+                            }}>
+                                💬 {commentCount} · {formatDate(latestComment.timestamp)}
                             </span>
                         )}
                         <span style={{ color: '#666', marginLeft: 'auto' }}>
@@ -3988,10 +4010,10 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                             </div>
                             <div style={{ display: 'grid', gap: '1rem', marginTop: '1.5rem' }}>
                                 <div><strong>Type:</strong> {ticket.type}</div>
-                                <div><strong>Requester:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigatePerson && onNavigatePerson(ticket.requester); }}>{ticket.requester}</span></div>
-                                <div><strong>Room:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigateRoom && onNavigateRoom(ticket.room); }}>{ticket.room}</span></div>
+                                <div>👤 <strong>Requester:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigatePerson && onNavigatePerson(ticket.requester); }}>{ticket.requester}</span></div>
+                                <div>📍 <strong>Room:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigateRoom && onNavigateRoom(ticket.room); }}>{ticket.room}</span></div>
                                 {inventoryItemName && (
-                                    <div><strong>Inventory Item:</strong> <span className="clickable-field" onClick={handleNavigateInventory}>{inventoryItemName}</span></div>
+                                    <div>📦 <strong>Inventory Item:</strong> <span className="clickable-field" onClick={handleNavigateInventory}>{inventoryItemName}</span></div>
                                 )}
                                 {ticket.estimated_cost && <div><strong>Cost:</strong> {formatCurrency(ticket.estimated_cost)}</div>}
                                 <div><strong>Created:</strong> {formatDate(ticket.created_at)}</div>
