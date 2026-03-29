@@ -303,6 +303,145 @@
             font-size: 0.95rem;
         }
 
+        /* Multi-select filter dropdown */
+        .multi-select-filter {
+            position: relative;
+        }
+
+        .multi-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            min-width: 140px;
+            user-select: none;
+            transition: border-color 0.15s;
+        }
+
+        .multi-select-trigger:hover {
+            border-color: #aaa;
+        }
+
+        .multi-select-trigger.open {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+        }
+
+        .multi-select-trigger-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #374151;
+        }
+
+        .multi-select-trigger-text.placeholder {
+            color: #9ca3af;
+        }
+
+        .multi-select-arrow {
+            font-size: 0.7rem;
+            color: #6b7280;
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+
+        .multi-select-arrow.open {
+            transform: rotate(180deg);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            min-width: 100%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .multi-select-actions {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .multi-select-action-btn {
+            font-size: 0.75rem;
+            color: #3b82f6;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.15rem 0.3rem;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .multi-select-action-btn:hover {
+            background: #eff6ff;
+        }
+
+        .multi-select-action-btn.clear {
+            color: #ef4444;
+        }
+
+        .multi-select-action-btn.clear:hover {
+            background: #fef2f2;
+        }
+
+        .multi-select-options {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #374151;
+            transition: background 0.1s;
+        }
+
+        .multi-select-option:hover {
+            background: #f3f4f6;
+        }
+
+        .multi-select-option.selected {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .multi-select-option input[type="checkbox"] {
+            accent-color: #3b82f6;
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .multi-select-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            padding: 0.1rem 0.4rem;
+            margin-left: 0.25rem;
+        }
+
         /* Ticket List */
         .ticket-list {
             display: grid;
@@ -1039,10 +1178,10 @@ const dbApi = {
             const [modalData, setModalData] = useState({});
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [filters, setFilters] = useState({
-                status: 'all',
-                priority: 'all',
-                type: 'all',
-                room: 'all'
+                status: [],
+                priority: [],
+                type: [],
+                room: []
             });
             const [settingsAuthenticated, setSettingsAuthenticated] = useState(false);
             const [selectedPerson, setSelectedPerson] = useState(null);
@@ -1256,10 +1395,10 @@ const addHome = async (home) => {
             const currentTickets = (tickets || []).filter(t => t.home_id === currentHome);
             const currentInventory = (inventory || []).filter(i => i.home_id === currentHome);
             const filteredTickets = currentTickets.filter(ticket => {
-                if (filters.status !== 'all' && ticket.status !== filters.status) return false;
-                if (filters.priority !== 'all' && ticket.priority !== filters.priority) return false;
-                if (filters.type !== 'all' && ticket.type !== filters.type) return false;
-                if (filters.room !== 'all' && ticket.room !== filters.room) return false;
+                if (filters.status.length > 0 && !filters.status.includes(ticket.status)) return false;
+                if (filters.priority.length > 0 && !filters.priority.includes(ticket.priority)) return false;
+                if (filters.type.length > 0 && !filters.type.includes(ticket.type)) return false;
+                if (filters.room.length > 0 && !filters.room.includes(ticket.room)) return false;
                 return true;
             });
 
@@ -1695,6 +1834,86 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
+        function MultiSelectFilter({ label, options, selected, onChange }) {
+            const [open, setOpen] = React.useState(false);
+            const ref = React.useRef(null);
+
+            React.useEffect(() => {
+                const handleClickOutside = (e) => {
+                    if (ref.current && !ref.current.contains(e.target)) {
+                        setOpen(false);
+                    }
+                };
+                if (open) document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [open]);
+
+            const toggleOption = (value) => {
+                if (selected.includes(value)) {
+                    onChange(selected.filter(v => v !== value));
+                } else {
+                    onChange([...selected, value]);
+                }
+            };
+
+            const selectAll = () => onChange(options.map(o => o.value));
+            const clearAll = () => onChange([]);
+
+            const triggerText = selected.length === 0
+                ? `All ${label}`
+                : selected.length === 1
+                    ? selected[0]
+                    : `${selected.length} selected`;
+
+            return (
+                <div className="filter-group">
+                    <label>{label}</label>
+                    <div className="multi-select-filter" ref={ref}>
+                        <div
+                            className={`multi-select-trigger${open ? ' open' : ''}`}
+                            onClick={() => setOpen(!open)}
+                        >
+                            <span className={`multi-select-trigger-text${selected.length === 0 ? ' placeholder' : ''}`}>
+                                {triggerText}
+                            </span>
+                            {selected.length > 0 && (
+                                <span className="multi-select-badge">{selected.length}</span>
+                            )}
+                            <span className={`multi-select-arrow${open ? ' open' : ''}`}>▼</span>
+                        </div>
+                        {open && (
+                            <div className="multi-select-dropdown">
+                                <div className="multi-select-actions">
+                                    <button className="multi-select-action-btn" onClick={selectAll}>Select all</button>
+                                    <button className="multi-select-action-btn clear" onClick={clearAll}>Clear</button>
+                                </div>
+                                <div className="multi-select-options">
+                                    {options.map(opt => {
+                                        const { value, label: display } = opt;
+                                        const isSelected = selected.includes(value);
+                                        return (
+                                            <div
+                                                key={value}
+                                                className={`multi-select-option${isSelected ? ' selected' : ''}`}
+                                                onClick={() => toggleOption(value)}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    readOnly
+                                                />
+                                                {display}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
             return (
                 <div>
@@ -1706,44 +1925,40 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     </div>
 
                     <div className="filters">
-                        <div className="filter-group">
-                            <label>Status</label>
-                            <select value={filters.status} onChange={(e) => onFilterChange({...filters, status: e.target.value})}>
-                                <option value="all">All</option>
-                                <option value="open">Open</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="waiting">Waiting</option>
-                                <option value="blocking">Blocking</option>
-                                <option value="closed">Closed</option>
-                            </select>
-                        </div>
-                        <div className="filter-group">
-                            <label>Priority</label>
-                            <select value={filters.priority} onChange={(e) => onFilterChange({...filters, priority: e.target.value})}>
-                                <option value="all">All</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
-                        </div>
-                        <div className="filter-group">
-                            <label>Type</label>
-                            <select value={filters.type} onChange={(e) => onFilterChange({...filters, type: e.target.value})}>
-                                <option value="all">All Types</option>
-                                {data.ticketTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="filter-group">
-                            <label>Room</label>
-                            <select value={filters.room} onChange={(e) => onFilterChange({...filters, room: e.target.value})}>
-                                <option value="all">All Rooms</option>
-                                {data.rooms.map(room => (
-                                    <option key={room} value={room}>{room}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <MultiSelectFilter
+                            label="Status"
+                            options={[
+                                { value: 'open', label: 'Open' },
+                                { value: 'in-progress', label: 'In Progress' },
+                                { value: 'waiting', label: 'Waiting' },
+                                { value: 'blocking', label: 'Blocking' },
+                                { value: 'closed', label: 'Closed' },
+                            ]}
+                            selected={filters.status}
+                            onChange={(val) => onFilterChange({ ...filters, status: val })}
+                        />
+                        <MultiSelectFilter
+                            label="Priority"
+                            options={[
+                                { value: 'high', label: 'High' },
+                                { value: 'medium', label: 'Medium' },
+                                { value: 'low', label: 'Low' },
+                            ]}
+                            selected={filters.priority}
+                            onChange={(val) => onFilterChange({ ...filters, priority: val })}
+                        />
+                        <MultiSelectFilter
+                            label="Type"
+                            options={data.ticketTypes.map(t => ({ value: t, label: t }))}
+                            selected={filters.type}
+                            onChange={(val) => onFilterChange({ ...filters, type: val })}
+                        />
+                        <MultiSelectFilter
+                            label="Room"
+                            options={data.rooms.map(r => ({ value: r, label: r }))}
+                            selected={filters.room}
+                            onChange={(val) => onFilterChange({ ...filters, room: val })}
+                        />
                     </div>
 
                     <div className="ticket-list">
