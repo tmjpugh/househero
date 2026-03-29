@@ -1325,8 +1325,8 @@ const dbApi = {
         return res.json();
     },
 
-    deleteTicket: async (id) => {
-        const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+    deleteTicket: async (id, homeId) => {
+        const res = await fetch(`/api/tickets/${id}?home_id=${homeId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to delete ticket');
         return res.json();
     }
@@ -1619,9 +1619,11 @@ const addHome = async (home) => {
                 }
             };
 
-            const deleteTicketAction = async (ticketId) => {
-                await dbApi.deleteTicket(ticketId);
-                setTickets(prev => prev.filter(t => t.id !== ticketId));
+            const deleteTicketAction = async (ticketNumber) => {
+                const ticket = currentTickets.find(t => t.ticket_number === ticketNumber);
+                if (!ticket) throw new Error(`Ticket #${ticketNumber} not found in this home`);
+                await dbApi.deleteTicket(ticket.id, currentHome);
+                setTickets(prev => prev.filter(t => t.id !== ticket.id));
             };
 
             const currentHomeData = homes.find(h => h.id === currentHome);
@@ -2355,7 +2357,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                         <div style={{ flex: 1 }}>
                             <div className="ticket-title">{ticket.title}</div>
                             <div className="ticket-meta">
-                                <span>#{ticket.id}</span>
+                                <span>#{ticket.ticket_number}</span>
                                 <span>📍 <span className="clickable-field" onClick={(e) => {
                                     e.stopPropagation();
                                     onNavigateRoom && onNavigateRoom(ticket.room);
@@ -3827,7 +3829,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>Ticket #{ticket.id}</h2>
+                    <h2>Ticket #{ticket.ticket_number}</h2>
                     <button className="close-btn" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
