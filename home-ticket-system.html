@@ -1403,13 +1403,13 @@ const dbApi = {
                 }
             }, [currentHome]);
 
-            // Refresh tickets and inventory silently whenever the active view changes
+            // Refresh tickets and inventory silently whenever the active view or home changes
             useEffect(() => {
                 if (currentHome && view !== 'home-select') {
                     dbApi.getTickets(currentHome).then(d => setTickets(d || [])).catch(() => {});
                     dbApi.getInventory(currentHome).then(d => setInventory(d || [])).catch(() => {});
                 }
-            }, [view]);
+            }, [view, currentHome]);
 
             // Background polling: refresh tickets and inventory every 30 seconds
             useEffect(() => {
@@ -3063,6 +3063,11 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
     const [homeName, setHomeName] = useState(currentHome?.name || '');
     const [homeAddress, setHomeAddress] = useState(currentHome?.address || '');
 
+    useEffect(() => {
+        setHomeName(currentHome?.name || '');
+        setHomeAddress(currentHome?.address || '');
+    }, [currentHome?.id, currentHome?.name, currentHome?.address]);
+
     const persistCustomSettings = async (updatedData) => {
         if (!currentHome?.id) return;
         await dbApi.updateSettings(currentHome.id, {
@@ -3206,6 +3211,10 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
             reader.readAsText(file);
         }
     };
+
+    const selectedDeleteTicket = deleteTicketId && tickets
+        ? tickets.find(t => t.ticket_number === parseInt(deleteTicketId))
+        : null;
 
     return (
         <div>
@@ -3452,14 +3461,11 @@ function SettingsView({ data, setData, currentHome, onUpdateHome, onLogout, onDe
                             placeholder="Or enter ticket number..."
                             style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd' }}
                         />
-                        {deleteTicketId && tickets && (() => {
-                            const found = tickets.find(t => t.ticket_number === parseInt(deleteTicketId));
-                            return found ? (
-                                <div style={{ fontSize: '0.875rem', color: '#374151', background: '#f3f4f6', padding: '0.5rem', borderRadius: '6px' }}>
-                                    #{found.ticket_number} – {found.title}
-                                </div>
-                            ) : null;
-                        })()}
+                        {deleteTicketId && selectedDeleteTicket && (
+                            <div style={{ fontSize: '0.875rem', color: '#374151', background: '#f3f4f6', padding: '0.5rem', borderRadius: '6px' }}>
+                                #{selectedDeleteTicket.ticket_number} – {selectedDeleteTicket.title}
+                            </div>
+                        )}
                         <input
                             type="password"
                             value={deleteTicketPassword}
@@ -3900,6 +3906,11 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
         return item ? item.name : null;
     };
 
+    const handleNavigateInventory = () => {
+        const item = inventory && inventory.find(i => i.id === ticket.inventory_item_id);
+        if (item) { onClose(); onViewInventory && onViewInventory(item); }
+    };
+
     const handleSave = () => {
         // Detect changed fields and generate system comments
         const trackedFields = [
@@ -3968,7 +3979,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div><strong>Requester:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigatePerson && onNavigatePerson(ticket.requester); }}>{ticket.requester}</span></div>
                                 <div><strong>Room:</strong> <span className="clickable-field" onClick={() => { onClose(); onNavigateRoom && onNavigateRoom(ticket.room); }}>{ticket.room}</span></div>
                                 {inventoryItemName && (
-                                    <div><strong>Inventory Item:</strong> <span className="clickable-field" onClick={() => { const item = inventory && inventory.find(i => i.id === ticket.inventory_item_id); if (item) { onClose(); onViewInventory && onViewInventory(item); } }}>{inventoryItemName}</span></div>
+                                    <div><strong>Inventory Item:</strong> <span className="clickable-field" onClick={handleNavigateInventory}>{inventoryItemName}</span></div>
                                 )}
                                 {ticket.estimated_cost && <div><strong>Cost:</strong> {formatCurrency(ticket.estimated_cost)}</div>}
                                 <div><strong>Created:</strong> {formatDate(ticket.created_at)}</div>
