@@ -1796,6 +1796,7 @@ if (view === 'home-select') {
                                 <DashboardView 
                                     stats={stats} 
                                     tickets={currentTickets}
+                                    inventory={currentInventory}
                                     home={currentHomeData}
                                     onNewTicket={() => setShowModal('add-ticket')}
                                     onTicketClick={(ticket) => {
@@ -1836,6 +1837,7 @@ if (view === 'home-select') {
                                     filters={filters}
                                     onFilterChange={setFilters}
                                     data={data}
+                                    inventory={currentInventory}
                                     onNewTicket={() => setShowModal('add-ticket')}
                                     onTicketClick={(ticket) => {
                                         setModalData(ticket);
@@ -2162,7 +2164,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
     );
 }
 
-        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory, onNavigateTickets, onChangeHome }) {
+        function DashboardView({ stats, tickets, inventory, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory, onNavigateTickets, onChangeHome }) {
             const recentTickets = tickets.slice(-5).reverse();
 
             return (
@@ -2237,6 +2239,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                 onNavigateRoom={onNavigateRoom}
                                 onNavigatePerson={onNavigatePerson}
                                 onNavigateInventory={onNavigateInventory}
+                                inventory={inventory}
                             />
                         ))}
                     </div>
@@ -2324,7 +2327,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketsView({ tickets, filters, onFilterChange, data, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function TicketsView({ tickets, filters, onFilterChange, data, inventory, onNewTicket, onTicketClick, getTicketAgeColor, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
             return (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -2381,6 +2384,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                 onNavigateRoom={onNavigateRoom}
                                 onNavigatePerson={onNavigatePerson}
                                 onNavigateInventory={onNavigateInventory}
+                                inventory={inventory}
                             />
                         ))}
                         {tickets.length === 0 && (
@@ -2393,7 +2397,11 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function TicketCard({ ticket, onClick, className = '', onNavigateRoom, onNavigatePerson, onNavigateInventory, inventory }) {
+            const inventoryItemName = ticket.inventory_item ||
+                (ticket.inventory_item_id && inventory
+                    ? (inventory.find(i => i.id === ticket.inventory_item_id || i.id === parseInt(ticket.inventory_item_id)) || {}).name
+                    : null);
             return (
                 <div className={`ticket-card priority-${ticket.priority} ${className}`} onClick={onClick}>
                     <div className="ticket-header">
@@ -2409,11 +2417,11 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                                     e.stopPropagation();
                                     onNavigatePerson && onNavigatePerson(ticket.requester);
                                 }}>{ticket.requester}</span></span>
-                                {ticket.inventory_item && (
+                                {inventoryItemName && (
                                     <span>📦 <span className="clickable-field" onClick={(e) => {
                                         e.stopPropagation();
-                                        onNavigateInventory && onNavigateInventory({ id: ticket.inventory_item_id, name: ticket.inventory_item });
-                                    }}>{ticket.inventory_item}</span></span>
+                                        onNavigateInventory && onNavigateInventory({ id: ticket.inventory_item_id, name: inventoryItemName });
+                                    }}>{inventoryItemName}</span></span>
                                 )}
                             </div>
                         </div>
@@ -3847,7 +3855,11 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                             <label>Inventory Item (optional)</label>
                             <select 
                                 value={formData.inventory_item_id} 
-                                onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
+                                onChange={(e) => {
+                                    const selectedId = e.target.value;
+                                    const selectedItem = inventory && inventory.find(i => String(i.id) === selectedId);
+                                    setFormData({...formData, inventory_item_id: selectedId, inventory_item: selectedItem ? selectedItem.name : null});
+                                }}
                             >
                                 <option value="">-- Select Item --</option>
                                 {inventory && inventory.length > 0 ? (
@@ -4104,7 +4116,11 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <label>Inventory Item (optional)</label>
                                     <select 
                                         value={formData.inventory_item_id || ''} 
-                                        onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value ? parseInt(e.target.value) : null})}
+                                        onChange={(e) => {
+                                            const selectedId = e.target.value ? parseInt(e.target.value) : null;
+                                            const selectedItem = inventory && inventory.find(i => i.id === selectedId);
+                                            setFormData({...formData, inventory_item_id: selectedId, inventory_item: selectedItem ? selectedItem.name : null});
+                                        }}
                                     >
                                         <option value="">-- Select Item --</option>
                                         {inventory && inventory.length > 0 ? (
