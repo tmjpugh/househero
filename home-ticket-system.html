@@ -61,6 +61,134 @@
             order: -1;
         }
 
+        .search-icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .search-icon-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 80px;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .search-input-row {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            gap: 0.5rem;
+        }
+
+        .search-input-row input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1.1rem;
+            padding: 0.25rem;
+        }
+
+        .search-close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.3rem;
+            color: #666;
+            padding: 0.25rem;
+        }
+
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .search-section-label {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f9f9f9;
+        }
+
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.15s;
+        }
+
+        .search-result-item:hover {
+            background: #f5f5f5;
+        }
+
+        .search-result-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .search-result-title {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .search-result-sub {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.1rem;
+        }
+
+        .search-no-results {
+            padding: 2rem;
+            text-align: center;
+            color: #999;
+        }
+
+        .stat-card {
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
         /* Main Layout */
         .main-layout {
             display: flex;
@@ -1145,6 +1273,16 @@ const dbApi = {
         });
         if (!res.ok) throw new Error('Failed to update home');
         return res.json();
+    },
+
+    addComment: async (ticketId, comment) => {
+        const res = await fetch(`/api/tickets/${ticketId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(comment)
+        });
+        if (!res.ok) throw new Error('Failed to add comment');
+        return res.json();
     }
 };
 
@@ -1188,6 +1326,10 @@ const dbApi = {
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState('');
             const [roomSort, setRoomSort] = useState('alpha');
+            const [personSort, setPersonSort] = useState('alpha');
+            const [inventorySort, setInventorySort] = useState('alpha');
+            const [searchOpen, setSearchOpen] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
 
             // Load homes on mount
             useEffect(() => {
@@ -1311,10 +1453,16 @@ const addHome = async (home) => {
                 }
             };
 
-            const updateTicket = async (ticketId, updates) => {
+            const updateTicket = async (ticketId, updates, changeComments) => {
                 try {
                     setLoading(true);
                     await dbApi.updateTicket(ticketId, updates);
+                    // Persist any system change-log comments
+                    if (changeComments && changeComments.length > 0) {
+                        for (const c of changeComments) {
+                            await dbApi.addComment(ticketId, c).catch((err) => console.error('Failed to save change comment:', err));
+                        }
+                    }
                     await loadTickets();
                     setShowModal(null);
                     setError('');
@@ -1325,25 +1473,43 @@ const addHome = async (home) => {
                 }
             };
 
-            const addComment = (ticketId, comment) => {
-                const updatedTickets = tickets.map(t => {
-                    if (t.id === ticketId) {
-                        return {
-                            ...t,
-                            comments: [
-                                ...(t.comments || []),
-                                {
-                                    id: Date.now(),
-                                    text: comment.text,
-                                    author: comment.author,
-                                    timestamp: new Date().toISOString()
-                                }
-                            ]
-                        };
-                    }
-                    return t;
-                });
-                setTickets(updatedTickets);
+            const addComment = async (ticketId, comment) => {
+                try {
+                    const saved = await dbApi.addComment(ticketId, comment);
+                    const newComment = saved || {
+                        id: Date.now(),
+                        text: comment.text,
+                        author: comment.author,
+                        is_system: comment.is_system || false,
+                        timestamp: new Date().toISOString()
+                    };
+                    setTickets(prev => prev.map(t => {
+                        if (t.id === ticketId) {
+                            return { ...t, comments: [...(t.comments || []), newComment] };
+                        }
+                        return t;
+                    }));
+                } catch (err) {
+                    // Fallback: update local state only
+                    setTickets(prev => prev.map(t => {
+                        if (t.id === ticketId) {
+                            return {
+                                ...t,
+                                comments: [
+                                    ...(t.comments || []),
+                                    {
+                                        id: Date.now(),
+                                        text: comment.text,
+                                        author: comment.author,
+                                        is_system: comment.is_system || false,
+                                        timestamp: new Date().toISOString()
+                                    }
+                                ]
+                            };
+                        }
+                        return t;
+                    }));
+                }
             };
 
             const addInventoryItem = async (item) => {
@@ -1465,12 +1631,8 @@ if (view === 'home-select') {
                                 {sidebarOpen ? '✕' : '☰'}
                             </button>
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
-                            <button className="btn btn-secondary" onClick={() => {
-                                setCurrentHome(null);
-                                setSettingsAuthenticated(false);
-                                setView('home-select');
-                            }}>
-                                Change Home
+                            <button className="search-icon-btn" onClick={() => { setSearchOpen(true); setSearchQuery(''); }} title="Search">
+                                🔍
                             </button>
                         </div>
                     </header>
@@ -1546,6 +1708,19 @@ if (view === 'home-select') {
                                         setModalData(item);
                                         setShowModal('view-inventory');
                                     }}
+                                    onNavigateTickets={(newFilters) => {
+                                        if (newFilters === null) {
+                                            setView('inventory');
+                                        } else {
+                                            setFilters(newFilters);
+                                            setView('tickets');
+                                        }
+                                    }}
+                                    onChangeHome={() => {
+                                        setCurrentHome(null);
+                                        setSettingsAuthenticated(false);
+                                        setView('home-select');
+                                    }}
                                 />
                             )}
 
@@ -1579,6 +1754,8 @@ if (view === 'home-select') {
                                 <InventoryView
                                     inventory={currentInventory}
                                     tickets={currentTickets}
+                                    sort={inventorySort}
+                                    onSortChange={setInventorySort}
                                     onNewItem={() => setShowModal('add-inventory')}
                                     onItemClick={(item) => {
                                         setModalData(item);
@@ -1611,6 +1788,8 @@ if (view === 'home-select') {
                                     tickets={currentTickets}
                                     selectedPerson={selectedPerson}
                                     onSelectPerson={setSelectedPerson}
+                                    sort={personSort}
+                                    onSortChange={setPersonSort}
                                     onTicketClick={(ticket) => {
                                         setModalData(ticket);
                                         setShowModal('view-ticket');
@@ -1712,9 +1891,118 @@ if (view === 'home-select') {
                             onDocumentChange={loadInventory}
                         />
                     )}
+
+                    {searchOpen && (
+                        <SearchOverlay
+                            query={searchQuery}
+                            onQueryChange={setSearchQuery}
+                            onClose={() => setSearchOpen(false)}
+                            tickets={currentTickets}
+                            inventory={currentInventory}
+                            onTicketClick={(ticket) => {
+                                setSearchOpen(false);
+                                setModalData(ticket);
+                                setShowModal('view-ticket');
+                            }}
+                            onInventoryClick={(item) => {
+                                setSearchOpen(false);
+                                setModalData(item);
+                                setShowModal('view-inventory');
+                            }}
+                        />
+                    )}
                 </div>
             );
         }
+
+function SearchOverlay({ query, onQueryChange, onClose, tickets, inventory, onTicketClick, onInventoryClick }) {
+    const inputRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (inputRef.current) inputRef.current.focus();
+        const handleKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const q = query.trim().toLowerCase();
+
+    const matchedTickets = q.length >= 2
+        ? tickets.filter(t =>
+            (t.title && t.title.toLowerCase().includes(q)) ||
+            (t.description && t.description.toLowerCase().includes(q)) ||
+            (t.room && t.room.toLowerCase().includes(q)) ||
+            (t.requester && t.requester.toLowerCase().includes(q)) ||
+            (t.type && t.type.toLowerCase().includes(q))
+          ).slice(0, 8)
+        : [];
+
+    const matchedInventory = q.length >= 2
+        ? inventory.filter(i =>
+            (i.name && i.name.toLowerCase().includes(q)) ||
+            (i.type && i.type.toLowerCase().includes(q)) ||
+            (i.make && i.make.toLowerCase().includes(q)) ||
+            (i.model && i.model.toLowerCase().includes(q)) ||
+            (i.room && i.room.toLowerCase().includes(q))
+          ).slice(0, 6)
+        : [];
+
+    const hasResults = matchedTickets.length > 0 || matchedInventory.length > 0;
+
+    return (
+        <div className="search-overlay" onClick={onClose}>
+            <div className="search-box" onClick={(e) => e.stopPropagation()}>
+                <div className="search-input-row">
+                    <span>🔍</span>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={query}
+                        onChange={(e) => onQueryChange(e.target.value)}
+                        placeholder="Search tickets and inventory..."
+                    />
+                    <button className="search-close-btn" onClick={onClose}>✕</button>
+                </div>
+                <div className="search-results">
+                    {q.length < 2 && (
+                        <div className="search-no-results">Type at least 2 characters to search…</div>
+                    )}
+                    {q.length >= 2 && !hasResults && (
+                        <div className="search-no-results">No results found for "{query}"</div>
+                    )}
+                    {matchedTickets.length > 0 && (
+                        <>
+                            <div className="search-section-label">Tickets</div>
+                            {matchedTickets.map(ticket => (
+                                <div key={ticket.id} className="search-result-item" onClick={() => onTicketClick(ticket)}>
+                                    <span className="search-result-icon">🎫</span>
+                                    <div>
+                                        <div className="search-result-title">{ticket.title}</div>
+                                        <div className="search-result-sub">{ticket.room} · {ticket.status} · {ticket.priority} priority</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
+                    {matchedInventory.length > 0 && (
+                        <>
+                            <div className="search-section-label">Inventory</div>
+                            {matchedInventory.map(item => (
+                                <div key={item.id} className="search-result-item" onClick={() => onInventoryClick(item)}>
+                                    <span className="search-result-icon">📦</span>
+                                    <div>
+                                        <div className="search-result-title">{item.name}</div>
+                                        <div className="search-result-sub">{item.make} {item.model} · {item.room}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function HomeSelector({ homes, onSelectHome, onAddHome }) {
     return (
@@ -1757,16 +2045,21 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
     );
 }
 
-        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory }) {
+        function DashboardView({ stats, tickets, home, onNewTicket, onTicketClick, onNavigateRoom, onNavigatePerson, onNavigateInventory, onNavigateTickets, onChangeHome }) {
             const recentTickets = tickets.slice(-5).reverse();
 
             return (
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
                         <h2>Dashboard</h2>
-                        <button className="btn btn-primary" onClick={onNewTicket}>
-                            + New Ticket
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button className="btn btn-secondary" onClick={onChangeHome}>
+                                Change Home
+                            </button>
+                            <button className="btn btn-primary" onClick={onNewTicket}>
+                                + New Ticket
+                            </button>
+                        </div>
                     </div>
 
                     {home?.photo && (
@@ -1799,19 +2092,19 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     )}
 
                     <div className="dashboard">
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => onNavigateTickets({ status: ['open', 'in-progress', 'waiting', 'blocking'], priority: [], type: [], room: [] })} title="View all open tickets">
                             <h3>{stats.open}</h3>
                             <p>Open Tickets</p>
                         </div>
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => onNavigateTickets({ status: ['in-progress'], priority: [], type: [], room: [] })} title="View in-progress tickets">
                             <h3>{stats.inProgress}</h3>
                             <p>In Progress</p>
                         </div>
-                        <div className="stat-card high">
+                        <div className="stat-card high" onClick={() => onNavigateTickets({ status: ['open', 'in-progress', 'waiting', 'blocking'], priority: ['high'], type: [], room: [] })} title="View high priority tickets">
                             <h3>{stats.high}</h3>
                             <p>High Priority</p>
                         </div>
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => onNavigateTickets(null)} title="View inventory">
                             <h3>{stats.totalInventory}</h3>
                             <p>Inventory Items</p>
                         </div>
@@ -2032,7 +2325,31 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
             );
         }
 
-function InventoryView({ inventory, tickets, onNewItem, onItemClick }) {
+function InventoryView({ inventory, tickets, sort, onSortChange, onNewItem, onItemClick }) {
+    const getSortedInventory = () => {
+        const sorted = [...inventory];
+        switch(sort) {
+            case 'alpha':
+                return sorted.sort((a, b) => a.name.localeCompare(b.name));
+            case 'tickets-desc':
+                return sorted.sort((a, b) => {
+                    const aCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === a.id).length;
+                    const bCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === b.id).length;
+                    return bCount - aCount;
+                });
+            case 'tickets-asc':
+                return sorted.sort((a, b) => {
+                    const aCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === a.id).length;
+                    const bCount = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === b.id).length;
+                    return aCount - bCount;
+                });
+            default:
+                return sorted;
+        }
+    };
+
+    const sortedInventory = getSortedInventory();
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
@@ -2042,8 +2359,20 @@ function InventoryView({ inventory, tickets, onNewItem, onItemClick }) {
                 </button>
             </div>
 
+            <div className="sort-controls">
+                <button className={`sort-btn ${sort === 'alpha' ? 'active' : ''}`} onClick={() => onSortChange('alpha')}>
+                    Alphabetical
+                </button>
+                <button className={`sort-btn ${sort === 'tickets-desc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-desc')}>
+                    Tickets (High to Low)
+                </button>
+                <button className={`sort-btn ${sort === 'tickets-asc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-asc')}>
+                    Tickets (Low to High)
+                </button>
+            </div>
+
             <div className="inventory-grid">
-                {inventory.map(item => {
+                {sortedInventory.map(item => {
                     const relatedTickets = tickets.filter(t => t.inventory_item_id && parseInt(t.inventory_item_id) === item.id);
                     const openTickets = relatedTickets.filter(t => t.status !== 'closed');
                     
@@ -2231,7 +2560,7 @@ function RoomsView({ rooms, tickets, inventory, sort, onSortChange, onTicketClic
     );
 }
 
-        function PeopleView({ people, tickets, selectedPerson, onSelectPerson, onTicketClick }) {
+        function PeopleView({ people, tickets, selectedPerson, onSelectPerson, sort, onSortChange, onTicketClick }) {
             if (selectedPerson) {
                 const personTickets = tickets.filter(t => t.requester === selectedPerson);
                 const openTickets = personTickets.filter(t => t.status !== 'closed');
@@ -2269,25 +2598,51 @@ function RoomsView({ rooms, tickets, inventory, sort, onSortChange, onTicketClic
                 );
             }
 
+            const getSortedPeople = () => {
+                const peopleData = people.map(person => ({
+                    name: person,
+                    tickets: tickets.filter(t => t.requester === person),
+                    openTickets: tickets.filter(t => t.requester === person && t.status !== 'closed')
+                }));
+                switch(sort) {
+                    case 'alpha':
+                        return peopleData.sort((a, b) => a.name.localeCompare(b.name));
+                    case 'tickets-desc':
+                        return peopleData.sort((a, b) => b.tickets.length - a.tickets.length);
+                    case 'tickets-asc':
+                        return peopleData.sort((a, b) => a.tickets.length - b.tickets.length);
+                    default:
+                        return peopleData;
+                }
+            };
+
+            const sortedPeople = getSortedPeople();
+
             return (
                 <div>
                     <h2 style={{ marginBottom: '1.5rem' }}>People</h2>
+                    <div className="sort-controls">
+                        <button className={`sort-btn ${sort === 'alpha' ? 'active' : ''}`} onClick={() => onSortChange('alpha')}>
+                            Alphabetical
+                        </button>
+                        <button className={`sort-btn ${sort === 'tickets-desc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-desc')}>
+                            Tickets (High to Low)
+                        </button>
+                        <button className={`sort-btn ${sort === 'tickets-asc' ? 'active' : ''}`} onClick={() => onSortChange('tickets-asc')}>
+                            Tickets (Low to High)
+                        </button>
+                    </div>
                     <div className="people-grid">
-                        {people.map(person => {
-                            const personTickets = tickets.filter(t => t.requester === person);
-                            const openTickets = personTickets.filter(t => t.status !== 'closed');
-
-                            return (
-                                <div key={person} className="person-section" onClick={() => onSelectPerson(person)}>
-                                    <div className="person-header">{person}</div>
-                                    <div className="person-stats">
-                                        <span>👤</span>
-                                        <span>{openTickets.length} open</span>
-                                        <span>{personTickets.length - openTickets.length} closed</span>
-                                    </div>
+                        {sortedPeople.map(({ name: person, tickets: personTickets, openTickets }) => (
+                            <div key={person} className="person-section" onClick={() => onSelectPerson(person)}>
+                                <div className="person-header">{person}</div>
+                                <div className="person-stats">
+                                    <span>👤</span>
+                                    <span>{openTickets.length} open</span>
+                                    <span>{personTickets.length - openTickets.length} closed</span>
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
@@ -2965,7 +3320,38 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     };
 
     const handleSave = () => {
-        onUpdate(ticket.id, formData);
+        // Detect changed fields and generate system comments
+        const trackedFields = [
+            { key: 'status', label: 'Status' },
+            { key: 'priority', label: 'Priority' },
+            { key: 'requester', label: 'Requester' },
+            { key: 'room', label: 'Room' },
+            { key: 'title', label: 'Title' },
+            { key: 'type', label: 'Type' },
+        ];
+        const changeComments = [];
+        for (const field of trackedFields) {
+            const oldVal = ticket[field.key] != null ? String(ticket[field.key]) : '';
+            const newVal = formData[field.key] != null ? String(formData[field.key]) : '';
+            if (oldVal !== newVal) {
+                changeComments.push({
+                    text: `${field.label} changed from "${oldVal || '(none)'}" to "${newVal || '(none)'}"`,
+                    author: 'System',
+                    is_system: true
+                });
+            }
+        }
+        // Handle estimated_cost separately with currency formatting
+        const oldCost = ticket.estimated_cost != null && ticket.estimated_cost !== '' ? formatCurrency(ticket.estimated_cost) : '(none)';
+        const newCost = formData.estimated_cost != null && formData.estimated_cost !== '' ? formatCurrency(formData.estimated_cost) : '(none)';
+        if (oldCost !== newCost) {
+            changeComments.push({
+                text: `Estimated Cost changed from "${oldCost}" to "${newCost}"`,
+                author: 'System',
+                is_system: true
+            });
+        }
+        onUpdate(ticket.id, formData, changeComments);
         setEditing(false);
     };
 

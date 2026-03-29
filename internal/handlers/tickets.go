@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -34,6 +35,7 @@ func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	var tickets []models.Ticket
+	ticketIndex := map[int64]int{}
 	for rows.Next() {
 		var ticket models.Ticket
 		if err := rows.Scan(
@@ -45,11 +47,34 @@ func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		ticketIndex[ticket.ID] = len(tickets)
 		tickets = append(tickets, ticket)
 	}
 
 	if tickets == nil {
 		tickets = []models.Ticket{}
+	}
+
+	// Load comments for all tickets in a single query
+	commentRows, err := h.db.Query(
+		`SELECT id, ticket_id, text, author, is_system, timestamp 
+		 FROM comments 
+		 WHERE ticket_id IN (SELECT id FROM tickets WHERE home_id = $1) 
+		 ORDER BY timestamp`,
+		homeID,
+	)
+	if err == nil {
+		defer commentRows.Close()
+		for commentRows.Next() {
+			var comment models.Comment
+			if err := commentRows.Scan(&comment.ID, &comment.TicketID, &comment.Text, &comment.Author, &comment.IsSystem, &comment.Timestamp); err == nil {
+				if idx, ok := ticketIndex[comment.TicketID]; ok {
+					tickets[idx].Comments = append(tickets[idx].Comments, comment)
+				}
+			}
+		}
+	} else {
+		log.Printf("Warning: failed to load comments for home %s: %v", homeID, err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
