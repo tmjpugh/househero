@@ -682,8 +682,10 @@
             max-width: 800px;
             width: 100%;
             max-height: 90vh;
-            overflow-y: auto;
+            overflow: hidden;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
         }
 
         .modal-header {
@@ -692,6 +694,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .modal-header h2 {
@@ -700,6 +703,8 @@
 
         .modal-body {
             padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
         }
 
         .modal-footer {
@@ -709,6 +714,7 @@
             gap: 1rem;
             justify-content: flex-end;
             flex-wrap: wrap;
+            flex-shrink: 0;
         }
 
         .form-group {
@@ -1154,6 +1160,7 @@
 
             .modal {
                 max-height: 100vh;
+                border-radius: 0;
             }
         }
     </style>
@@ -2319,13 +2326,13 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                         />
                         <MultiSelectFilter
                             label="Type"
-                            options={data.ticketTypes.map(t => ({ value: t, label: t }))}
+                            options={data.ticketTypes.slice().sort((a, b) => a.localeCompare(b)).map(t => ({ value: t, label: t }))}
                             selected={filters.type}
                             onChange={(val) => onFilterChange({ ...filters, type: val })}
                         />
                         <MultiSelectFilter
                             label="Room"
-                            options={data.rooms.map(r => ({ value: r, label: r }))}
+                            options={data.rooms.slice().sort((a, b) => a.localeCompare(b)).map(r => ({ value: r, label: r }))}
                             selected={filters.room}
                             onChange={(val) => onFilterChange({ ...filters, room: val })}
                         />
@@ -2534,13 +2541,13 @@ function InventoryItemDetail({ item, onBack, onUpdate, tickets, data, onViewTick
                             <div className="form-group">
                                 <label>Type</label>
                                 <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                    {(data.types || []).map(t => <option key={t} value={t}>{t}</option>)}
+                                    {(data.types || []).slice().sort((a, b) => a.localeCompare(b)).map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
                             <div className="form-group">
                                 <label>Make</label>
                                 <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
-                                    {(data.makes || []).map(m => <option key={m} value={m}>{m}</option>)}
+                                    {(data.makes || []).slice().sort((a, b) => a.localeCompare(b)).map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -2552,7 +2559,7 @@ function InventoryItemDetail({ item, onBack, onUpdate, tickets, data, onViewTick
                             <div className="form-group">
                                 <label>Room</label>
                                 <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                    {(data.rooms || []).map(r => <option key={r} value={r}>{r}</option>)}
+                                    {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => <option key={r} value={r}>{r}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -3684,7 +3691,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Type</label>
                             <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                {data.ticketTypes.map(t => (
+                                {data.ticketTypes.slice().sort((a, b) => a.localeCompare(b)).map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
@@ -3702,7 +3709,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Requester</label>
                             <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
-                                {(data.people || []).map(p => (
+                                {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(p => (
                                     <option key={p} value={p}>{p}</option>
                                 ))}
                             </select>
@@ -3710,7 +3717,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                         <div className="form-group">
                             <label>Room</label>
                             <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                {(data.rooms || []).map(r => (
+                                {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => (
                                     <option key={r} value={r}>{r}</option>
                                 ))}
                             </select>
@@ -3725,7 +3732,7 @@ function AddTicketModal({ onClose, onSave, data, inventory }) {
                             >
                                 <option value="">-- Select Item --</option>
                                 {inventory && inventory.length > 0 ? (
-                                    inventory.map(item => (
+                                    inventory.slice().sort((a, b) => a.name.localeCompare(b.name)).map(item => (
                                         <option key={item.id} value={item.id}>
                                             {item.name} ({item.room})
                                         </option>
@@ -3872,7 +3879,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     <div className="form-group">
                                         <label>Your Name</label>
                                         <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
-                                            {(data.people || []).map(p => (
+                                            {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(p => (
                                                 <option key={p} value={p}>{p}</option>
                                             ))}
                                         </select>
@@ -3911,7 +3918,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div className="form-group">
                                     <label>Requester</label>
                                     <select value={formData.requester} onChange={(e) => setFormData({...formData, requester: e.target.value})}>
-                                        {(data.people || []).map(p => (
+                                        {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(p => (
                                             <option key={p} value={p}>{p}</option>
                                         ))}
                                     </select>
@@ -3938,7 +3945,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div className="form-group">
                                     <label>Room</label>
                                     <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                        {(data.rooms || []).map(r => (
+                                        {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => (
                                             <option key={r} value={r}>{r}</option>
                                         ))}
                                     </select>
@@ -3965,7 +3972,7 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                     >
                                         <option value="">-- Select Item --</option>
                                         {inventory && inventory.length > 0 ? (
-                                            inventory.map(item => (
+                                            inventory.slice().sort((a, b) => a.name.localeCompare(b.name)).map(item => (
                                                 <option key={item.id} value={item.id}>
                                                     {item.name} ({item.room})
                                                 </option>
@@ -4037,7 +4044,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Type *</label>
                             <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                {(data.types || []).map(t => (
+                                {(data.types || []).slice().sort((a, b) => a.localeCompare(b)).map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
@@ -4045,7 +4052,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Make *</label>
                             <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
-                                {(data.makes || []).map(m => (
+                                {(data.makes || []).slice().sort((a, b) => a.localeCompare(b)).map(m => (
                                     <option key={m} value={m}>{m}</option>
                                 ))}
                             </select>
@@ -4064,7 +4071,7 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <div className="form-group">
                             <label>Room *</label>
                             <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                {(data.rooms || []).map(r => (
+                                {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => (
                                     <option key={r} value={r}>{r}</option>
                                 ))}
                             </select>
@@ -4262,7 +4269,7 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 <div className="form-group">
                                     <label>Type</label>
                                     <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                                        {(data.types || []).map(t => (
+                                        {(data.types || []).slice().sort((a, b) => a.localeCompare(b)).map(t => (
                                             <option key={t} value={t}>{t}</option>
                                         ))}
                                     </select>
@@ -4270,7 +4277,7 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 <div className="form-group">
                                     <label>Make</label>
                                     <select value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})}>
-                                        {(data.makes || []).map(m => (
+                                        {(data.makes || []).slice().sort((a, b) => a.localeCompare(b)).map(m => (
                                             <option key={m} value={m}>{m}</option>
                                         ))}
                                     </select>
@@ -4288,7 +4295,7 @@ function ViewInventoryModal({ item, onClose, onUpdate, tickets, data, onViewTick
                                 <div className="form-group">
                                     <label>Room</label>
                                     <select value={formData.room} onChange={(e) => setFormData({...formData, room: e.target.value})}>
-                                        {(data.rooms || []).map(r => (
+                                        {(data.rooms || []).slice().sort((a, b) => a.localeCompare(b)).map(r => (
                                             <option key={r} value={r}>{r}</option>
                                         ))}
                                     </select>
