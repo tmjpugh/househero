@@ -348,36 +348,42 @@ comments and updates that do not change status:
 
 ```yaml
 automation:
-  - alias: "HouseHero: Ticket status or comment"
-    trigger:
-      - platform: mqtt
-        topic: househero/tickets/updated
-        id: status_changed
-      - platform: mqtt
-        topic: househero/tickets/comment_added
-        id: comment_added
-    condition:
-      - condition: template
-        value_template: >
-          {% if trigger.id == 'status_changed' %}
-            {{ trigger.payload_json.status_new != '' and
-               trigger.payload_json.status_old != trigger.payload_json.status_new }}
-          {% else %}
-            {{ not trigger.payload_json.is_system }}
-          {% endif %}
-    action:
-      - service: notify.mobile_app_your_phone
-        data:
-          title: "HouseHero Ticket Update"
-          message: >
-            {% if trigger.id == 'status_changed' %}
-              [Home] #{{ trigger.payload_json.ticket_number }}
-              {{ trigger.payload_json.title }} | {{ trigger.payload_json.status_new }}
-            {% else %}
-              [Home] #{{ trigger.payload_json.ticket_number }}
-              {{ trigger.payload_json.title }} | {{ trigger.payload_json.status }} |
-              {{ trigger.payload_json.author }} commented: {{ trigger.payload_json.text }}
-            {% endif %}
+alias: "HouseHero: Ticket status or comment"
+description: Notifies on ticket status changes or new comments
+triggers:
+  - topic: househero/tickets/updated
+    id: status_changed
+    trigger: mqtt
+  - topic: househero/tickets/comment_added
+    id: comment_added
+    trigger: mqtt
+conditions:
+  - condition: template
+    value_template: |
+      {% if trigger.id == 'status_changed' %}
+        {{ trigger.payload_json.status_new != '' and
+           trigger.payload_json.status_old != trigger.payload_json.status_new }}
+      {% else %}
+        {{ not trigger.payload_json.is_system }}
+      {% endif %}
+actions:
+  - action: notify.mobile
+    data:
+      title: HouseHero Ticket Update
+      message: |
+        {% if trigger.id == 'status_changed' %}
+          [Home] #{{ trigger.payload_json.ticket_number }}
+          {{ trigger.payload_json.title }} | {{ trigger.payload_json.status_new }}
+        {% else %}
+          [Home] #{{ trigger.payload_json.ticket_number }}
+          {{ trigger.payload_json.title }} | {{ trigger.payload_json.status }} |
+          {{ trigger.payload_json.author }} commented: {{ trigger.payload_json.text }}
+        {% endif %}
+      data:
+        tag: househero_comment
+mode: single
+
+
 ```
 
 > Substitute `[Home]` with a static home name or map it from `trigger.payload_json.home_id` using a template helper.
