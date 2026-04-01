@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
@@ -211,7 +212,20 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.mqtt != nil {
-		h.mqtt.Publish(mqttservice.TopicTicketCreated, ticket)
+		h.mqtt.Publish(mqttservice.TopicTicketCreated, mqttservice.TicketEvent{
+			ID:           ticket.ID,
+			TicketNumber: ticket.TicketNumber,
+			HomeID:       ticket.HomeID,
+			Title:        ticket.Title,
+			Type:         ticket.Type,
+			Priority:     ticket.Priority,
+			Status:       ticket.Status,
+			Requester:    ticket.Requester,
+			Room:         ticket.Room,
+			EstimatedCost: ticket.EstimatedCost,
+			CreatedAt:    ticket.CreatedAt,
+			UpdatedAt:    ticket.UpdatedAt,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -240,6 +254,14 @@ func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch current state before updating so we can detect status changes for MQTT.
+	var oldStatus string
+	var oldHomeID, oldTicketNumber int64
+	var oldCreatedAt time.Time
+	prefetchErr := h.db.QueryRow(
+		`SELECT status, home_id, ticket_number, created_at FROM tickets WHERE id = $1`, ticketID,
+	).Scan(&oldStatus, &oldHomeID, &oldTicketNumber, &oldCreatedAt)
+
 	_, err := h.db.Exec(
 		`UPDATE tickets SET title = $1, description = $2, type = $3, priority = $4, 
 		                    status = $5, requester = $6, room = $7, inventory_item_id = $8,
@@ -266,8 +288,40 @@ func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.mqtt != nil {
-		ticket.ID, _ = strconv.ParseInt(ticketID, 10, 64)
-		h.mqtt.Publish(mqttservice.TopicTicketUpdated, ticket)
+		if prefetchErr != nil {
+			log.Printf("MQTT: could not fetch ticket state before update (id=%s): %v", ticketID, prefetchErr)
+		} else {
+			ticket.ID, _ = strconv.ParseInt(ticketID, 10, 64)
+			// Use values fetched from DB so home_id and ticket_number are always present.
+			homeID := oldHomeID
+			if ticket.HomeID != 0 {
+				homeID = ticket.HomeID
+			}
+			ticketNumber := oldTicketNumber
+			if ticket.TicketNumber != 0 {
+				ticketNumber = ticket.TicketNumber
+			}
+			event := mqttservice.TicketEvent{
+				ID:            ticket.ID,
+				TicketNumber:  ticketNumber,
+				HomeID:        homeID,
+				Title:         ticket.Title,
+				Type:          ticket.Type,
+				Priority:      ticket.Priority,
+				Status:        ticket.Status,
+				Requester:     ticket.Requester,
+				Room:          ticket.Room,
+				EstimatedCost: ticket.EstimatedCost,
+				Closer:        ticket.Closer,
+				CreatedAt:     oldCreatedAt,
+				UpdatedAt:     ticket.UpdatedAt,
+			}
+			if oldStatus != ticket.Status {
+				event.StatusOld = oldStatus
+				event.StatusNew = ticket.Status
+			}
+			h.mqtt.Publish(mqttservice.TopicTicketUpdated, event)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -323,7 +377,24 @@ func (h *TicketHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	comment.TicketID, _ = strconv.ParseInt(ticketID, 10, 64)
 
 	if h.mqtt != nil {
-		h.mqtt.Publish(mqttservice.TopicCommentAdded, comment)
+		// Fetch home_id and ticket_number so the MQTT event is self-contained.
+		var homeID, ticketNumber int64
+		if ctxErr := h.db.QueryRow(
+			`SELECT home_id, ticket_number FROM tickets WHERE id = $1`, ticketID,
+		).Scan(&homeID, &ticketNumber); ctxErr != nil {
+			log.Printf("MQTT: could not fetch ticket context for comment (ticket_id=%s): %v", ticketID, ctxErr)
+		} else {
+			h.mqtt.Publish(mqttservice.TopicCommentAdded, mqttservice.CommentEvent{
+				CommentID:    comment.ID,
+				TicketID:     comment.TicketID,
+				TicketNumber: ticketNumber,
+				HomeID:       homeID,
+				Author:       comment.Author,
+				Text:         comment.Text,
+				IsSystem:     comment.IsSystem,
+				Timestamp:    comment.Timestamp,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

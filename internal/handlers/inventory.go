@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -162,7 +163,15 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	if h.mqtt != nil {
-		h.mqtt.Publish(mqttservice.TopicInventoryCreated, item)
+		h.mqtt.Publish(mqttservice.TopicInventoryCreated, mqttservice.InventoryEvent{
+			ID:        item.ID,
+			HomeID:    item.HomeID,
+			Name:      item.Name,
+			Type:      item.Type,
+			Make:      item.Make,
+			Room:      item.Room,
+			UpdatedAt: item.CreatedAt,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -195,8 +204,22 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	if h.mqtt != nil {
-		item.ID, _ = strconv.ParseInt(itemID, 10, 64)
-		h.mqtt.Publish(mqttservice.TopicInventoryUpdated, item)
+		itemIDInt, _ := strconv.ParseInt(itemID, 10, 64)
+		// Fetch home_id from DB; the PUT body may not include it.
+		var homeID int64
+		if ctxErr := h.db.QueryRow(`SELECT home_id FROM inventory_items WHERE id = $1`, itemID).Scan(&homeID); ctxErr != nil {
+			log.Printf("MQTT: could not fetch inventory item context (id=%s): %v", itemID, ctxErr)
+		} else {
+			h.mqtt.Publish(mqttservice.TopicInventoryUpdated, mqttservice.InventoryEvent{
+				ID:        itemIDInt,
+				HomeID:    homeID,
+				Name:      item.Name,
+				Type:      item.Type,
+				Make:      item.Make,
+				Room:      item.Room,
+				UpdatedAt: item.UpdatedAt,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
