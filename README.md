@@ -397,25 +397,25 @@ Home Assistant (2023.5+) supports inline conversation sentences directly in
 automations — no separate intent file is needed:
 
 ```yaml
-automation:
-  - alias: "HouseHero: Create ticket via voice"
-    trigger:
-      - platform: conversation
-        command:
-          - "Househero create a ticket {title}"
-          - "Househero create ticket {title}"
-    action:
-      - service: mqtt.publish
-        data:
-          topic: househero/commands/tickets/create
-          payload: >
-            {
-              "request_id": "ha-voice-{{ now().timestamp() | int }}",
-              "home_id": 1,
-              "title": "{{ trigger.slots.title }}",
-              "requester": "Voice Command",
-              "priority": "medium"
-            }
+alias: "HouseHero: Create ticket via voice"
+description: ""
+triggers:
+  - command:
+      - Househero create [a] ticket {title}
+    trigger: conversation
+actions:
+  - action: mqtt.publish
+    data:
+      topic: househero/commands/tickets/create
+      payload: |
+        {
+          "request_id": "ha-voice-{{ now().timestamp() | int }}",
+          "home_id": 1,
+          "title": "{{ trigger.slots.title }}",
+          "requester": "Voice Command",
+          "priority": "medium",
+          "room": "other",
+        }
 ```
 
 > Set `home_id` to the numeric ID of your home (visible in the HouseHero URL
