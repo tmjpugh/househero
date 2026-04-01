@@ -81,6 +81,31 @@
             background: rgba(255,255,255,0.2);
         }
 
+        .mqtt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        .mqtt-badge::before {
+            content: '';
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 0 2px rgba(74,222,128,0.35);
+        }
+
         .search-overlay {
             position: fixed;
             top: 0;
@@ -1388,6 +1413,20 @@ const dbApi = {
             const [inventorySort, setInventorySort] = useState('alpha');
             const [searchOpen, setSearchOpen] = useState(false);
             const [searchQuery, setSearchQuery] = useState('');
+            const [mqttConnected, setMqttConnected] = useState(false);
+
+            // Poll /api/status to reflect MQTT connection state
+            useEffect(() => {
+                const checkStatus = () => {
+                    fetch('/api/status')
+                        .then(r => r.ok ? r.json() : null)
+                        .then(d => setMqttConnected(!!(d && d.mqtt_connected)))
+                        .catch(() => setMqttConnected(false));
+                };
+                checkStatus();
+                const interval = setInterval(checkStatus, 30000);
+                return () => clearInterval(interval);
+            }, []);
 
             // Load homes on mount
             useEffect(() => {
@@ -1728,6 +1767,7 @@ if (view === 'home-select') {
                                 {sidebarOpen ? '✕' : '☰'}
                             </button>
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
+                            {mqttConnected && <span className="mqtt-badge">MQTT</span>}
                             <button className="search-icon-btn" onClick={() => setShowModal('add-ticket')} title="New Ticket" style={{ fontSize: '1.4rem' }}>
                                 ＋
                             </button>
@@ -2470,6 +2510,20 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                             {formatDate(ticket.created_at)}
                         </span>
                     </div>
+                    {latestComment && !latestComment.is_system && (
+                        <div style={{
+                            marginTop: '0.5rem',
+                            padding: '0.4rem 0.6rem',
+                            background: isRecentComment ? '#fffbeb' : '#f9fafb',
+                            borderLeft: `3px solid ${isRecentComment ? '#f59e0b' : '#d1d5db'}`,
+                            borderRadius: '0 4px 4px 0',
+                            fontSize: '0.82rem',
+                            color: '#374151',
+                        }}>
+                            <span style={{ fontWeight: '600', color: '#6b7280' }}>{latestComment.author}: </span>
+                            {latestComment.text.length > 120 ? latestComment.text.substring(0, 120) + '…' : latestComment.text}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -3932,7 +3986,8 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(ticket);
     const [newComment, setNewComment] = useState('');
-    const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
+    const [commentAuthor, setCommentAuthor] = useState('');
+    const [commentAuthorError, setCommentAuthorError] = useState(false);
 
     const getInventoryItemName = () => {
         if (!ticket.inventory_item_id || !inventory) return null;
@@ -3982,12 +4037,18 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     };
 
     const handleAddComment = () => {
+        if (!commentAuthor) {
+            setCommentAuthorError(true);
+            return;
+        }
         if (newComment.trim()) {
             onAddComment(ticket.id, {
                 text: newComment,
                 author: commentAuthor
             });
             setNewComment('');
+            setCommentAuthor('');
+            setCommentAuthorError(false);
         }
     };
 
@@ -4038,11 +4099,13 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div style={{ marginTop: '1.5rem' }}>
                                     <div className="form-group">
                                         <label>Your Name</label>
-                                        <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
+                                        <select value={commentAuthor} onChange={(e) => { setCommentAuthor(e.target.value); setCommentAuthorError(false); }} style={commentAuthorError ? { borderColor: '#dc2626' } : {}}>
+                                            <option value="">-- Select person --</option>
                                             {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(p => (
                                                 <option key={p} value={p}>{p}</option>
                                             ))}
                                         </select>
+                                        {commentAuthorError && <div style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.25rem' }}>Please select a person before adding a comment.</div>}
                                     </div>
                                     <div className="form-group">
                                         <textarea
@@ -4265,8 +4328,8 @@ function AddInventoryModal({ onClose, onSave, data }) {
                             <label>Purchase Date</label>
                             <input
                                 type="date"
-                                value={formData.purchase_date}
-                                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+                                value={formData.purchase_date ? formData.purchase_date.split('T')[0] : ''}
+                                onChange={(e) => setFormData({...formData, purchase_date: e.target.value ? new Date(e.target.value).toISOString() : null})}
                             />
                         </div>
                     </div>
@@ -4274,8 +4337,8 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <label>Warranty Expires</label>
                         <input
                             type="date"
-                            value={formData.warranty_expires}
-                            onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
+                            value={formData.warranty_expires ? formData.warranty_expires.split('T')[0] : ''}
+                            onChange={(e) => setFormData({...formData, warranty_expires: e.target.value ? new Date(e.target.value).toISOString() : null})}
                         />
                     </div>
                 </div>

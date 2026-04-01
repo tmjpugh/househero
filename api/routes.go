@@ -8,15 +8,17 @@ import (
 	"github.com/tmjpugh/househero/internal/config"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/handlers"
+	"github.com/tmjpugh/househero/internal/mqttservice"
 )
 
-func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
+func SetupRoutes(db *database.DB, cfg *config.Config, mqttSvc *mqttservice.Service) *mux.Router {
 	router := mux.NewRouter()
 
 	homeHandler := handlers.NewHomeHandler(db)
-	ticketHandler := handlers.NewTicketHandler(db)
-	inventoryHandler := handlers.NewInventoryHandler(db)
+	ticketHandler := handlers.NewTicketHandler(db, mqttSvc)
+	inventoryHandler := handlers.NewInventoryHandler(db, mqttSvc)
 	settingsHandler := handlers.NewSettingsHandler(db)
+	statusHandler := handlers.NewStatusHandler(mqttSvc)
 	
 	// Create uploads directory
 	uploadDir := "/app/uploads"
@@ -34,7 +36,9 @@ func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
 	// Serve uploaded files
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
 
-	// API routes - no auth required
+	// Status / health routes
+	router.HandleFunc("/api/status", statusHandler.GetStatus).Methods("GET")
+
 	// Home routes
 	router.HandleFunc("/api/homes", homeHandler.GetHomes).Methods("GET")
 	router.HandleFunc("/api/homes/{id}", homeHandler.GetHome).Methods("GET")

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,14 +10,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/models"
+	"github.com/tmjpugh/househero/internal/mqttservice"
 )
 
 type InventoryHandler struct {
-	db *database.DB
+	db   *database.DB
+	mqtt *mqttservice.Service
 }
 
-func NewInventoryHandler(db *database.DB) *InventoryHandler {
-	return &InventoryHandler{db: db}
+func NewInventoryHandler(db *database.DB, mqttSvc *mqttservice.Service) *InventoryHandler {
+	return &InventoryHandler{db: db, mqtt: mqttSvc}
 }
 
 func (h *InventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +162,18 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if h.mqtt != nil {
+		h.mqtt.Publish(mqttservice.TopicInventoryCreated, mqttservice.InventoryEvent{
+			ID:        item.ID,
+			HomeID:    item.HomeID,
+			Name:      item.Name,
+			Type:      item.Type,
+			Make:      item.Make,
+			Room:      item.Room,
+			UpdatedAt: item.CreatedAt,
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(item)
@@ -186,6 +201,25 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if h.mqtt != nil {
+		itemIDInt, _ := strconv.ParseInt(itemID, 10, 64)
+		// Fetch home_id from DB; the PUT body may not include it.
+		var homeID int64
+		if ctxErr := h.db.QueryRow(`SELECT home_id FROM inventory_items WHERE id = $1`, itemID).Scan(&homeID); ctxErr != nil {
+			log.Printf("MQTT: could not fetch inventory item context (id=%s): %v", itemID, ctxErr)
+		} else {
+			h.mqtt.Publish(mqttservice.TopicInventoryUpdated, mqttservice.InventoryEvent{
+				ID:        itemIDInt,
+				HomeID:    homeID,
+				Name:      item.Name,
+				Type:      item.Type,
+				Make:      item.Make,
+				Room:      item.Room,
+				UpdatedAt: item.UpdatedAt,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
