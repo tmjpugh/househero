@@ -375,7 +375,7 @@ automation:
               {{ trigger.payload_json.title }} | {{ trigger.payload_json.status_new }}
             {% else %}
               [Home] #{{ trigger.payload_json.ticket_number }}
-              {{ trigger.payload_json.ticket_title }} | {{ trigger.payload_json.ticket_status }} |
+              {{ trigger.payload_json.title }} | {{ trigger.payload_json.status }} |
               {{ trigger.payload_json.author }} commented: {{ trigger.payload_json.text }}
             {% endif %}
 ```

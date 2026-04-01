@@ -29,6 +29,8 @@ type TicketEvent struct {
 
 // CommentEvent is published to househero/tickets/comment_added.
 // Includes the full ticket context so consumers never need a second lookup.
+// Comment-specific fields: comment_id, author, text, is_system, timestamp.
+// Ticket context fields use the same names as TicketEvent for consistency.
 type CommentEvent struct {
 	CommentID    int64     `json:"comment_id"`
 	TicketID     int64     `json:"ticket_id"`
@@ -39,21 +41,21 @@ type CommentEvent struct {
 	IsSystem     bool      `json:"is_system"`
 	Timestamp    time.Time `json:"timestamp"`
 
-	// Full ticket context so subscribers have all ticket data without a second lookup.
-	TicketTitle           string     `json:"ticket_title"`
-	TicketType            string     `json:"ticket_type"`
-	TicketPriority        string     `json:"ticket_priority"`
-	TicketStatus          string     `json:"ticket_status"`
-	TicketRequester       string     `json:"ticket_requester"`
-	TicketRoom            string     `json:"ticket_room"`
-	TicketDescription     *string    `json:"ticket_description,omitempty"`
-	TicketInventoryItemID *int64     `json:"ticket_inventory_item_id,omitempty"`
-	TicketInventoryItem   *string    `json:"ticket_inventory_item,omitempty"`
-	TicketEstimatedCost   *string    `json:"ticket_estimated_cost,omitempty"`
-	TicketCloser          *string    `json:"ticket_closer,omitempty"`
-	TicketCreatedAt       time.Time  `json:"ticket_created_at"`
-	TicketUpdatedAt       time.Time  `json:"ticket_updated_at"`
-	TicketClosedAt        *time.Time `json:"ticket_closed_at,omitempty"`
+	// Full ticket context — same field names as TicketEvent for consistency.
+	Title           string     `json:"title"`
+	Type            string     `json:"type"`
+	Priority        string     `json:"priority"`
+	Status          string     `json:"status"`
+	Requester       string     `json:"requester"`
+	Room            string     `json:"room"`
+	Description     *string    `json:"description,omitempty"`
+	InventoryItemID *int64     `json:"inventory_item_id,omitempty"`
+	InventoryItem   *string    `json:"inventory_item,omitempty"`
+	EstimatedCost   *string    `json:"estimated_cost,omitempty"`
+	Closer          *string    `json:"closer,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	ClosedAt        *time.Time `json:"closed_at,omitempty"`
 }
 
 // InventoryEvent is published to househero/inventory/created and househero/inventory/updated.
