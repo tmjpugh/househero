@@ -18,6 +18,7 @@ func SetupRoutes(db *database.DB, cfg *config.Config, mqttSvc *mqttservice.Servi
 	ticketHandler := handlers.NewTicketHandler(db, mqttSvc)
 	inventoryHandler := handlers.NewInventoryHandler(db, mqttSvc)
 	settingsHandler := handlers.NewSettingsHandler(db)
+	statusHandler := handlers.NewStatusHandler(mqttSvc)
 	
 	// Create uploads directory
 	uploadDir := "/app/uploads"
@@ -35,7 +36,9 @@ func SetupRoutes(db *database.DB, cfg *config.Config, mqttSvc *mqttservice.Servi
 	// Serve uploaded files
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
 
-	// API routes - no auth required
+	// Status / health routes
+	router.HandleFunc("/api/status", statusHandler.GetStatus).Methods("GET")
+
 	// Home routes
 	router.HandleFunc("/api/homes", homeHandler.GetHomes).Methods("GET")
 	router.HandleFunc("/api/homes/{id}", homeHandler.GetHome).Methods("GET")

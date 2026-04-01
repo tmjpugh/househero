@@ -81,6 +81,31 @@
             background: rgba(255,255,255,0.2);
         }
 
+        .mqtt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        .mqtt-badge::before {
+            content: '';
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 0 2px rgba(74,222,128,0.35);
+        }
+
         .search-overlay {
             position: fixed;
             top: 0;
@@ -1388,6 +1413,20 @@ const dbApi = {
             const [inventorySort, setInventorySort] = useState('alpha');
             const [searchOpen, setSearchOpen] = useState(false);
             const [searchQuery, setSearchQuery] = useState('');
+            const [mqttConnected, setMqttConnected] = useState(false);
+
+            // Poll /api/status to reflect MQTT connection state
+            useEffect(() => {
+                const checkStatus = () => {
+                    fetch('/api/status')
+                        .then(r => r.ok ? r.json() : null)
+                        .then(d => setMqttConnected(!!(d && d.mqtt_connected)))
+                        .catch(() => setMqttConnected(false));
+                };
+                checkStatus();
+                const interval = setInterval(checkStatus, 30000);
+                return () => clearInterval(interval);
+            }, []);
 
             // Load homes on mount
             useEffect(() => {
@@ -1728,6 +1767,7 @@ if (view === 'home-select') {
                                 {sidebarOpen ? '✕' : '☰'}
                             </button>
                             <h1>{currentHomeData?.name || 'Home Maintenance'}</h1>
+                            {mqttConnected && <span className="mqtt-badge">MQTT</span>}
                             <button className="search-icon-btn" onClick={() => setShowModal('add-ticket')} title="New Ticket" style={{ fontSize: '1.4rem' }}>
                                 ＋
                             </button>
