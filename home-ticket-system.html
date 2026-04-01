@@ -2470,6 +2470,20 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                             {formatDate(ticket.created_at)}
                         </span>
                     </div>
+                    {latestComment && !latestComment.is_system && (
+                        <div style={{
+                            marginTop: '0.5rem',
+                            padding: '0.4rem 0.6rem',
+                            background: isRecentComment ? '#fffbeb' : '#f9fafb',
+                            borderLeft: `3px solid ${isRecentComment ? '#f59e0b' : '#d1d5db'}`,
+                            borderRadius: '0 4px 4px 0',
+                            fontSize: '0.82rem',
+                            color: '#374151',
+                        }}>
+                            <span style={{ fontWeight: '600', color: '#6b7280' }}>{latestComment.author}: </span>
+                            {latestComment.text.length > 120 ? latestComment.text.substring(0, 120) + '…' : latestComment.text}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -4265,8 +4279,8 @@ function AddInventoryModal({ onClose, onSave, data }) {
                             <label>Purchase Date</label>
                             <input
                                 type="date"
-                                value={formData.purchase_date}
-                                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+                                value={formData.purchase_date ? formData.purchase_date.split('T')[0] : ''}
+                                onChange={(e) => setFormData({...formData, purchase_date: e.target.value ? new Date(e.target.value).toISOString() : null})}
                             />
                         </div>
                     </div>
@@ -4274,8 +4288,8 @@ function AddInventoryModal({ onClose, onSave, data }) {
                         <label>Warranty Expires</label>
                         <input
                             type="date"
-                            value={formData.warranty_expires}
-                            onChange={(e) => setFormData({...formData, warranty_expires: e.target.value})}
+                            value={formData.warranty_expires ? formData.warranty_expires.split('T')[0] : ''}
+                            onChange={(e) => setFormData({...formData, warranty_expires: e.target.value ? new Date(e.target.value).toISOString() : null})}
                         />
                     </div>
                 </div>

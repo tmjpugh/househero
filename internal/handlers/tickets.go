@@ -9,14 +9,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/models"
+	"github.com/tmjpugh/househero/internal/mqttservice"
 )
 
 type TicketHandler struct {
-	db *database.DB
+	db   *database.DB
+	mqtt *mqttservice.Service
 }
 
-func NewTicketHandler(db *database.DB) *TicketHandler {
-	return &TicketHandler{db: db}
+func NewTicketHandler(db *database.DB, mqttSvc *mqttservice.Service) *TicketHandler {
+	return &TicketHandler{db: db, mqtt: mqttSvc}
 }
 
 func (h *TicketHandler) GetTickets(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +210,10 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.mqtt != nil {
+		h.mqtt.Publish(mqttservice.TopicTicketCreated, ticket)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(ticket)
@@ -257,6 +263,11 @@ func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, isBlockingID := range ticket.IsBlocking {
 		h.db.Exec("INSERT INTO ticket_dependencies (ticket_id, is_blocking_id) VALUES ($1, $2)", ticketID, isBlockingID)
+	}
+
+	if h.mqtt != nil {
+		ticket.ID, _ = strconv.ParseInt(ticketID, 10, 64)
+		h.mqtt.Publish(mqttservice.TopicTicketUpdated, ticket)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -310,6 +321,11 @@ func (h *TicketHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comment.TicketID, _ = strconv.ParseInt(ticketID, 10, 64)
+
+	if h.mqtt != nil {
+		h.mqtt.Publish(mqttservice.TopicCommentAdded, comment)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(comment)

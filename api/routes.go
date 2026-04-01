@@ -8,14 +8,15 @@ import (
 	"github.com/tmjpugh/househero/internal/config"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/handlers"
+	"github.com/tmjpugh/househero/internal/mqttservice"
 )
 
-func SetupRoutes(db *database.DB, cfg *config.Config) *mux.Router {
+func SetupRoutes(db *database.DB, cfg *config.Config, mqttSvc *mqttservice.Service) *mux.Router {
 	router := mux.NewRouter()
 
 	homeHandler := handlers.NewHomeHandler(db)
-	ticketHandler := handlers.NewTicketHandler(db)
-	inventoryHandler := handlers.NewInventoryHandler(db)
+	ticketHandler := handlers.NewTicketHandler(db, mqttSvc)
+	inventoryHandler := handlers.NewInventoryHandler(db, mqttSvc)
 	settingsHandler := handlers.NewSettingsHandler(db)
 	
 	// Create uploads directory

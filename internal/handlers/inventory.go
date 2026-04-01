@@ -9,14 +9,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/models"
+	"github.com/tmjpugh/househero/internal/mqttservice"
 )
 
 type InventoryHandler struct {
-	db *database.DB
+	db   *database.DB
+	mqtt *mqttservice.Service
 }
 
-func NewInventoryHandler(db *database.DB) *InventoryHandler {
-	return &InventoryHandler{db: db}
+func NewInventoryHandler(db *database.DB, mqttSvc *mqttservice.Service) *InventoryHandler {
+	return &InventoryHandler{db: db, mqtt: mqttSvc}
 }
 
 func (h *InventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +161,10 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if h.mqtt != nil {
+		h.mqtt.Publish(mqttservice.TopicInventoryCreated, item)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(item)
@@ -186,6 +192,11 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if h.mqtt != nil {
+		item.ID, _ = strconv.ParseInt(itemID, 10, 64)
+		h.mqtt.Publish(mqttservice.TopicInventoryUpdated, item)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -22,11 +22,28 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: househero
+      # MQTT (optional — remove or leave blank to disable)
+      # MQTT_BROKER: tcp://mosquitto:1883
+      # MQTT_CLIENT_ID: househero
     depends_on:
       - postgres
     volumes:
       - uploads_data:/app/uploads  # Persistent uploads
 
+  # Optional: built-in MQTT broker.
+  # Uncomment this service and set MQTT_BROKER above to enable MQTT support.
+  # mosquitto:
+  #   image: eclipse-mosquitto:2
+  #   ports:
+  #     - "1883:1883"   # MQTT
+  #     - "9001:9001"   # WebSocket
+  #   volumes:
+  #     - mosquitto_data:/mosquitto/data
+  #     - mosquitto_log:/mosquitto/log
+  #     - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
 volumes:
   postgres_data:
   uploads_data:
+  # mosquitto_data:
+  # mosquitto_log:
