@@ -17,7 +17,7 @@ HouseHero is a comprehensive home maintenance tracking system with a React front
 ## Tech Stack
 
 - **Frontend**: React 18 with Vanilla CSS
-- **Backend**: Go 1.24
+- **Backend**: Go 1.26
 - **Database**: PostgreSQL 15
 - **Containerization**: Docker & Docker Compose
 - **MQTT** (optional): Eclipse Paho client; any MQTT v3.1/v5 broker (e.g. Mosquitto)
