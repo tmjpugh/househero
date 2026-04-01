@@ -181,7 +181,7 @@ MQTT is **opt-in**. Set `MQTT_BROKER` in your `.env` / environment to enable it.
 |-------|---------|---------|
 | `househero/tickets/created` | New ticket saved | Full ticket JSON |
 | `househero/tickets/updated` | Ticket updated | Full ticket JSON |
-| `househero/tickets/comment_added` | Comment added | Full comment JSON |
+| `househero/tickets/comment_added` | Comment added | Comment + full ticket JSON |
 | `househero/inventory/created` | New inventory item saved | Full item JSON |
 | `househero/inventory/updated` | Inventory item updated | Full item JSON |
 
@@ -375,7 +375,7 @@ automation:
               {{ trigger.payload_json.title }} | {{ trigger.payload_json.status_new }}
             {% else %}
               [Home] #{{ trigger.payload_json.ticket_number }}
-              {{ trigger.payload_json.title }} | {{ trigger.payload_json.status }} |
+              {{ trigger.payload_json.ticket_title }} | {{ trigger.payload_json.ticket_status }} |
               {{ trigger.payload_json.author }} commented: {{ trigger.payload_json.text }}
             {% endif %}
 ```
