@@ -3946,7 +3946,8 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState(ticket);
     const [newComment, setNewComment] = useState('');
-    const [commentAuthor, setCommentAuthor] = useState(data.people[0] || 'Self');
+    const [commentAuthor, setCommentAuthor] = useState('');
+    const [commentAuthorError, setCommentAuthorError] = useState(false);
 
     const getInventoryItemName = () => {
         if (!ticket.inventory_item_id || !inventory) return null;
@@ -3996,12 +3997,18 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
     };
 
     const handleAddComment = () => {
+        if (!commentAuthor) {
+            setCommentAuthorError(true);
+            return;
+        }
         if (newComment.trim()) {
             onAddComment(ticket.id, {
                 text: newComment,
                 author: commentAuthor
             });
             setNewComment('');
+            setCommentAuthor('');
+            setCommentAuthorError(false);
         }
     };
 
@@ -4052,11 +4059,13 @@ function ViewTicketModal({ ticket, onClose, onUpdate, onAddComment, data, invent
                                 <div style={{ marginTop: '1.5rem' }}>
                                     <div className="form-group">
                                         <label>Your Name</label>
-                                        <select value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)}>
+                                        <select value={commentAuthor} onChange={(e) => { setCommentAuthor(e.target.value); setCommentAuthorError(false); }} style={commentAuthorError ? { borderColor: '#dc2626' } : {}}>
+                                            <option value="">-- Select person --</option>
                                             {(data.people || []).slice().sort((a, b) => a.localeCompare(b)).map(p => (
                                                 <option key={p} value={p}>{p}</option>
                                             ))}
                                         </select>
+                                        {commentAuthorError && <div style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: '0.25rem' }}>Please select a person before adding a comment.</div>}
                                     </div>
                                     <div className="form-group">
                                         <textarea
