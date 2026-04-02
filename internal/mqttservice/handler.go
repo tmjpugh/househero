@@ -3,11 +3,36 @@ package mqttservice
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/tmjpugh/househero/internal/database"
 	"github.com/tmjpugh/househero/internal/models"
 )
+
+// htmlTagRe matches HTML/XML tags for sanitization.
+var htmlTagRe = regexp.MustCompile(`<[^>]*>`)
+
+// sanitizeString removes HTML tags, null bytes, and ASCII control characters
+// from s (preserving tab, newline, and carriage return), then truncates to
+// maxLen Unicode code points. Returns the trimmed result.
+func sanitizeString(s string, maxLen int) string {
+	s = htmlTagRe.ReplaceAllString(s, "")
+	s = strings.ReplaceAll(s, "\x00", "")
+	var b strings.Builder
+	for _, r := range s {
+		if r >= 0x20 || r == '\t' || r == '\n' || r == '\r' {
+			b.WriteRune(r)
+		}
+	}
+	s = strings.TrimSpace(b.String())
+	runes := []rune(s)
+	if len(runes) > maxLen {
+		s = string(runes[:maxLen])
+	}
+	return s
+}
 
 // DBCommandHandler implements CommandHandler using the application database.
 type DBCommandHandler struct {
@@ -21,7 +46,12 @@ func NewDBCommandHandler(db *database.DB) *DBCommandHandler {
 
 // HandleCreateTicket creates a ticket from the MQTT payload.
 // Required fields: home_id, title.
-// Optional fields: type, priority, requester, room, description, estimated_cost.
+// Optional fields: type (default "maintenance"), priority (default "medium"),
+// requester, room, description, estimated_cost, inventory_item_id, inventory_item.
+// All string inputs are sanitized to strip HTML tags and control characters.
+// Invalid optional values are silently ignored and left blank.
+// inventory_item_id (numeric) and inventory_item (free text) are both accepted;
+// when inventory_item_id is provided the item name is resolved from the database.
 func (h *DBCommandHandler) HandleCreateTicket(payload []byte) (interface{}, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal(payload, &data); err != nil {
@@ -33,46 +63,75 @@ func (h *DBCommandHandler) HandleCreateTicket(payload []byte) (interface{}, erro
 		return nil, fmt.Errorf("home_id is required and must be a number")
 	}
 
-	title, ok := data["title"].(string)
-	if !ok || title == "" {
+	title := sanitizeString(stringOrDefault(data, "title", ""), 255)
+	if title == "" {
 		return nil, fmt.Errorf("title is required")
 	}
 
-	ticketType := stringOrDefault(data, "type", "maintenance")
-	priority := stringOrDefault(data, "priority", "medium")
-	requester := stringOrDefault(data, "requester", "")
-	room := stringOrDefault(data, "room", "")
+	ticketType := sanitizeString(stringOrDefault(data, "type", "maintenance"), 100)
+	if ticketType == "" {
+		ticketType = "maintenance"
+	}
+
+	priority := sanitizeString(stringOrDefault(data, "priority", "medium"), 20)
+	if priority == "" {
+		priority = "medium"
+	}
+
+	requester := sanitizeString(stringOrDefault(data, "requester", ""), 255)
+	room := sanitizeString(stringOrDefault(data, "room", ""), 100)
 
 	var description *string
-	if d, ok := data["description"].(string); ok && d != "" {
+	if d := sanitizeString(stringOrDefault(data, "description", ""), 10000); d != "" {
 		description = &d
 	}
 
 	var estimatedCost *string
-	if c, ok := data["estimated_cost"].(string); ok && c != "" {
+	if c := sanitizeString(stringOrDefault(data, "estimated_cost", ""), 50); c != "" {
 		estimatedCost = &c
 	}
 
+	// inventory_item_id: accept a numeric ID (integer or string); invalid values are silently ignored.
+	var invItemID *int64
+	if v, ok := data["inventory_item_id"]; ok && v != nil {
+		if id, idErr := extractInt64(data, "inventory_item_id"); idErr == nil && id > 0 {
+			invItemID = &id
+		}
+	}
+
+	// inventory_item: free-text item name; used only when inventory_item_id is not provided.
+	var inventoryItem *string
+	if invItemID == nil {
+		if s := sanitizeString(stringOrDefault(data, "inventory_item", ""), 255); s != "" {
+			inventoryItem = &s
+		}
+	}
+
 	ticket := models.Ticket{
-		HomeID:        homeID,
-		Title:         title,
-		Description:   description,
-		Type:          ticketType,
-		Priority:      priority,
-		Status:        "open",
-		Requester:     requester,
-		Room:          room,
-		EstimatedCost: estimatedCost,
+		HomeID:          homeID,
+		Title:           title,
+		Description:     description,
+		Type:            ticketType,
+		Priority:        priority,
+		Status:          "open",
+		Requester:       requester,
+		Room:            room,
+		InventoryItemID: invItemID,
+		EstimatedCost:   estimatedCost,
 	}
 
 	err = h.db.QueryRow(
-		`INSERT INTO tickets (home_id, ticket_number, title, description, type, priority, status, requester, room, estimated_cost)
+		`INSERT INTO tickets (home_id, ticket_number, title, description, type, priority, status, requester, room,
+		                      inventory_item_id, inventory_item, estimated_cost)
 		 VALUES ($1, (SELECT COALESCE(MAX(ticket_number), 0) + 1 FROM tickets WHERE home_id = $1),
-		         $2, $3, $4, $5, $6, $7, $8, $9)
-		 RETURNING id, ticket_number, created_at, updated_at`,
+		         $2, $3, $4, $5, $6, $7, $8, $9,
+		         COALESCE((SELECT name FROM inventory_items WHERE id = $9), $10),
+		         $11)
+		 RETURNING id, ticket_number, inventory_item, created_at, updated_at`,
 		ticket.HomeID, ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
-		ticket.Status, ticket.Requester, ticket.Room, ticket.EstimatedCost,
-	).Scan(&ticket.ID, &ticket.TicketNumber, &ticket.CreatedAt, &ticket.UpdatedAt)
+		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID, inventoryItem,
+		ticket.EstimatedCost,
+	).Scan(&ticket.ID, &ticket.TicketNumber, &ticket.InventoryItem, &ticket.CreatedAt, &ticket.UpdatedAt)
 
 	if err != nil {
 		return nil, fmt.Errorf("database error: %w", err)

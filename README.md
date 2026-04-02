@@ -204,8 +204,12 @@ Send a JSON payload to one of these topics; the response is published to `househ
 | `room` | — | Room/location |
 | `description` | — | Longer description |
 | `estimated_cost` | — | Cost estimate string, e.g. `"150.00"` |
+| `inventory_item_id` | — | Numeric ID of a linked inventory item; the item name is resolved automatically |
+| `inventory_item` | — | Free-text inventory item name (used when `inventory_item_id` is not provided) |
 
-Example:
+All string fields are sanitized to remove HTML tags and control characters before storage. Invalid or missing optional fields are silently left blank rather than causing an error.
+
+Example (by inventory item ID):
 
 ```json
 {
@@ -216,7 +220,23 @@ Example:
   "priority": "low",
   "requester": "Home Assistant",
   "room": "Utility Room",
-  "description": "Monthly filter replacement reminder"
+  "description": "Monthly filter replacement reminder",
+  "inventory_item_id": 7
+}
+```
+
+Example (by free-text inventory item name):
+
+```json
+{
+  "request_id": "ha-auto-002",
+  "home_id": 1,
+  "title": "Water leak detected – Kitchen",
+  "type": "emergency",
+  "priority": "critical",
+  "requester": "Home Assistant",
+  "room": "Kitchen",
+  "inventory_item": "Kitchen Sink"
 }
 ```
 
