@@ -2443,9 +2443,10 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                     ? (inventory.find(i => i.id === ticket.inventory_item_id || i.id === parseInt(ticket.inventory_item_id)) || {}).name
                     : null);
             const comments = ticket.comments || [];
-            const commentCount = comments.length;
+            const personComments = comments.filter(c => !c.is_system);
+            const commentCount = personComments.length;
             const latestComment = commentCount > 0
-                ? comments.reduce((a, b) => new Date(a.timestamp) > new Date(b.timestamp) ? a : b)
+                ? personComments.reduce((a, b) => new Date(a.timestamp) > new Date(b.timestamp) ? a : b)
                 : null;
             const latestCommentDate = latestComment ? new Date(latestComment.timestamp) : null;
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -2510,7 +2511,7 @@ function HomeSelector({ homes, onSelectHome, onAddHome }) {
                             {formatDate(ticket.created_at)}
                         </span>
                     </div>
-                    {latestComment && !latestComment.is_system && (
+                    {latestComment && (
                         <div style={{
                             marginTop: '0.5rem',
                             padding: '0.4rem 0.6rem',
