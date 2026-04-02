@@ -201,10 +201,10 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		         $2, $3, $4, $5, $6, $7, $8, $9,
 		         (SELECT name FROM inventory_items WHERE id = $9),
 		         $10) 
-		 RETURNING id, ticket_number, created_at, updated_at`,
+		 RETURNING id, ticket_number, inventory_item, created_at, updated_at`,
 		ticket.HomeID, ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
 		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID, ticket.EstimatedCost,
-	).Scan(&ticket.ID, &ticket.TicketNumber, &ticket.CreatedAt, &ticket.UpdatedAt)
+	).Scan(&ticket.ID, &ticket.TicketNumber, &ticket.InventoryItem, &ticket.CreatedAt, &ticket.UpdatedAt)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -213,18 +213,21 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
 	if h.mqtt != nil {
 		h.mqtt.Publish(mqttservice.TopicTicketCreated, mqttservice.TicketEvent{
-			ID:           ticket.ID,
-			TicketNumber: ticket.TicketNumber,
-			HomeID:       ticket.HomeID,
-			Title:        ticket.Title,
-			Type:         ticket.Type,
-			Priority:     ticket.Priority,
-			Status:       ticket.Status,
-			Requester:    ticket.Requester,
-			Room:         ticket.Room,
-			EstimatedCost: ticket.EstimatedCost,
-			CreatedAt:    ticket.CreatedAt,
-			UpdatedAt:    ticket.UpdatedAt,
+			ID:              ticket.ID,
+			TicketNumber:    ticket.TicketNumber,
+			HomeID:          ticket.HomeID,
+			Title:           ticket.Title,
+			Description:     ticket.Description,
+			Type:            ticket.Type,
+			Priority:        ticket.Priority,
+			Status:          ticket.Status,
+			Requester:       ticket.Requester,
+			Room:            ticket.Room,
+			InventoryItemID: ticket.InventoryItemID,
+			InventoryItem:   ticket.InventoryItem,
+			EstimatedCost:   ticket.EstimatedCost,
+			CreatedAt:       ticket.CreatedAt,
+			UpdatedAt:       ticket.UpdatedAt,
 		})
 	}
 
@@ -262,16 +265,17 @@ func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 		`SELECT status, home_id, ticket_number, created_at FROM tickets WHERE id = $1`, ticketID,
 	).Scan(&oldStatus, &oldHomeID, &oldTicketNumber, &oldCreatedAt)
 
-	_, err := h.db.Exec(
+	var updatedAt time.Time
+	err := h.db.QueryRow(
 		`UPDATE tickets SET title = $1, description = $2, type = $3, priority = $4, 
 		                    status = $5, requester = $6, room = $7, inventory_item_id = $8,
 		                    inventory_item = $9, estimated_cost = $10, closer = $11, closed_at = $12,
 		                    updated_at = CURRENT_TIMESTAMP 
-		 WHERE id = $13`,
+		 WHERE id = $13 RETURNING updated_at`,
 		ticket.Title, ticket.Description, ticket.Type, ticket.Priority,
 		ticket.Status, ticket.Requester, ticket.Room, ticket.InventoryItemID,
 		ticket.InventoryItem, ticket.EstimatedCost, ticket.Closer, ticket.ClosedAt, ticketID,
-	)
+	).Scan(&updatedAt)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -302,19 +306,23 @@ func (h *TicketHandler) UpdateTicket(w http.ResponseWriter, r *http.Request) {
 				ticketNumber = ticket.TicketNumber
 			}
 			event := mqttservice.TicketEvent{
-				ID:            ticket.ID,
-				TicketNumber:  ticketNumber,
-				HomeID:        homeID,
-				Title:         ticket.Title,
-				Type:          ticket.Type,
-				Priority:      ticket.Priority,
-				Status:        ticket.Status,
-				Requester:     ticket.Requester,
-				Room:          ticket.Room,
-				EstimatedCost: ticket.EstimatedCost,
-				Closer:        ticket.Closer,
-				CreatedAt:     oldCreatedAt,
-				UpdatedAt:     ticket.UpdatedAt,
+				ID:              ticket.ID,
+				TicketNumber:    ticketNumber,
+				HomeID:          homeID,
+				Title:           ticket.Title,
+				Description:     ticket.Description,
+				Type:            ticket.Type,
+				Priority:        ticket.Priority,
+				Status:          ticket.Status,
+				Requester:       ticket.Requester,
+				Room:            ticket.Room,
+				InventoryItemID: ticket.InventoryItemID,
+				InventoryItem:   ticket.InventoryItem,
+				EstimatedCost:   ticket.EstimatedCost,
+				Closer:          ticket.Closer,
+				CreatedAt:       oldCreatedAt,
+				UpdatedAt:       updatedAt,
+				ClosedAt:        ticket.ClosedAt,
 			}
 			if oldStatus != ticket.Status {
 				event.StatusOld = oldStatus
@@ -377,22 +385,44 @@ func (h *TicketHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	comment.TicketID, _ = strconv.ParseInt(ticketID, 10, 64)
 
 	if h.mqtt != nil {
-		// Fetch home_id and ticket_number so the MQTT event is self-contained.
-		var homeID, ticketNumber int64
+		// Fetch full ticket data so the MQTT event is self-contained.
+		var t models.Ticket
 		if ctxErr := h.db.QueryRow(
-			`SELECT home_id, ticket_number FROM tickets WHERE id = $1`, ticketID,
-		).Scan(&homeID, &ticketNumber); ctxErr != nil {
+			`SELECT id, ticket_number, home_id, title, description, type, priority, status,
+			        requester, room, inventory_item_id, inventory_item, estimated_cost,
+			        closer, created_at, updated_at, closed_at
+			 FROM tickets WHERE id = $1`, ticketID,
+		).Scan(
+			&t.ID, &t.TicketNumber, &t.HomeID, &t.Title, &t.Description, &t.Type,
+			&t.Priority, &t.Status, &t.Requester, &t.Room, &t.InventoryItemID,
+			&t.InventoryItem, &t.EstimatedCost, &t.Closer,
+			&t.CreatedAt, &t.UpdatedAt, &t.ClosedAt,
+		); ctxErr != nil {
 			log.Printf("MQTT: could not fetch ticket context for comment (ticket_id=%s): %v", ticketID, ctxErr)
 		} else {
 			h.mqtt.Publish(mqttservice.TopicCommentAdded, mqttservice.CommentEvent{
-				CommentID:    comment.ID,
-				TicketID:     comment.TicketID,
-				TicketNumber: ticketNumber,
-				HomeID:       homeID,
-				Author:       comment.Author,
-				Text:         comment.Text,
-				IsSystem:     comment.IsSystem,
-				Timestamp:    comment.Timestamp,
+				CommentID:       comment.ID,
+				TicketID:        comment.TicketID,
+				TicketNumber:    t.TicketNumber,
+				HomeID:          t.HomeID,
+				Author:          comment.Author,
+				Text:            comment.Text,
+				IsSystem:        comment.IsSystem,
+				Timestamp:       comment.Timestamp,
+				Title:           t.Title,
+				Type:            t.Type,
+				Priority:        t.Priority,
+				Status:          t.Status,
+				Requester:       t.Requester,
+				Room:            t.Room,
+				Description:     t.Description,
+				InventoryItemID: t.InventoryItemID,
+				InventoryItem:   t.InventoryItem,
+				EstimatedCost:   t.EstimatedCost,
+				Closer:          t.Closer,
+				CreatedAt:       t.CreatedAt,
+				UpdatedAt:       t.UpdatedAt,
+				ClosedAt:        t.ClosedAt,
 			})
 		}
 	}

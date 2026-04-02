@@ -164,13 +164,18 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 
 	if h.mqtt != nil {
 		h.mqtt.Publish(mqttservice.TopicInventoryCreated, mqttservice.InventoryEvent{
-			ID:        item.ID,
-			HomeID:    item.HomeID,
-			Name:      item.Name,
-			Type:      item.Type,
-			Make:      item.Make,
-			Room:      item.Room,
-			UpdatedAt: item.CreatedAt,
+			ID:              item.ID,
+			HomeID:          item.HomeID,
+			Name:            item.Name,
+			Type:            item.Type,
+			Make:            item.Make,
+			Model:           item.Model,
+			Room:            item.Room,
+			SerialNumber:    item.SerialNumber,
+			PurchaseDate:    item.PurchaseDate,
+			WarrantyExpires: item.WarrantyExpires,
+			CreatedAt:       item.CreatedAt,
+			UpdatedAt:       item.UpdatedAt,
 		})
 	}
 
@@ -204,20 +209,33 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	if h.mqtt != nil {
-		itemIDInt, _ := strconv.ParseInt(itemID, 10, 64)
-		// Fetch home_id from DB; the PUT body may not include it.
-		var homeID int64
-		if ctxErr := h.db.QueryRow(`SELECT home_id FROM inventory_items WHERE id = $1`, itemID).Scan(&homeID); ctxErr != nil {
+		// Fetch the full updated item from DB to include all fields and the DB-generated updated_at.
+		var fullItem models.InventoryItem
+		if ctxErr := h.db.QueryRow(
+			`SELECT id, home_id, name, type, make, model, room, serial_number,
+			        purchase_date, warranty_expires, created_at, updated_at
+			 FROM inventory_items WHERE id = $1`, itemID,
+		).Scan(
+			&fullItem.ID, &fullItem.HomeID, &fullItem.Name, &fullItem.Type, &fullItem.Make,
+			&fullItem.Model, &fullItem.Room, &fullItem.SerialNumber,
+			&fullItem.PurchaseDate, &fullItem.WarrantyExpires,
+			&fullItem.CreatedAt, &fullItem.UpdatedAt,
+		); ctxErr != nil {
 			log.Printf("MQTT: could not fetch inventory item context (id=%s): %v", itemID, ctxErr)
 		} else {
 			h.mqtt.Publish(mqttservice.TopicInventoryUpdated, mqttservice.InventoryEvent{
-				ID:        itemIDInt,
-				HomeID:    homeID,
-				Name:      item.Name,
-				Type:      item.Type,
-				Make:      item.Make,
-				Room:      item.Room,
-				UpdatedAt: item.UpdatedAt,
+				ID:              fullItem.ID,
+				HomeID:          fullItem.HomeID,
+				Name:            fullItem.Name,
+				Type:            fullItem.Type,
+				Make:            fullItem.Make,
+				Model:           fullItem.Model,
+				Room:            fullItem.Room,
+				SerialNumber:    fullItem.SerialNumber,
+				PurchaseDate:    fullItem.PurchaseDate,
+				WarrantyExpires: fullItem.WarrantyExpires,
+				CreatedAt:       fullItem.CreatedAt,
+				UpdatedAt:       fullItem.UpdatedAt,
 			})
 		}
 	}

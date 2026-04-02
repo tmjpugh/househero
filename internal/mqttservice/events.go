@@ -6,25 +6,31 @@ import "time"
 // For created events StatusOld and StatusNew are empty.
 // For updated events StatusOld and StatusNew are populated only when the status field changed.
 type TicketEvent struct {
-	ID            int64      `json:"id"`
-	TicketNumber  int64      `json:"ticket_number"`
-	HomeID        int64      `json:"home_id"`
-	Title         string     `json:"title"`
-	Type          string     `json:"type"`
-	Priority      string     `json:"priority"`
-	Status        string     `json:"status"`
-	Requester     string     `json:"requester"`
-	Room          string     `json:"room"`
-	EstimatedCost *string    `json:"estimated_cost,omitempty"`
-	Closer        *string    `json:"closer,omitempty"`
-	StatusOld     string     `json:"status_old,omitempty"`
-	StatusNew     string     `json:"status_new,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID              int64      `json:"id"`
+	TicketNumber    int64      `json:"ticket_number"`
+	HomeID          int64      `json:"home_id"`
+	Title           string     `json:"title"`
+	Description     *string    `json:"description,omitempty"`
+	Type            string     `json:"type"`
+	Priority        string     `json:"priority"`
+	Status          string     `json:"status"`
+	Requester       string     `json:"requester"`
+	Room            string     `json:"room"`
+	InventoryItemID *int64     `json:"inventory_item_id,omitempty"`
+	InventoryItem   *string    `json:"inventory_item,omitempty"`
+	EstimatedCost   *string    `json:"estimated_cost,omitempty"`
+	Closer          *string    `json:"closer,omitempty"`
+	StatusOld       string     `json:"status_old,omitempty"`
+	StatusNew       string     `json:"status_new,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	ClosedAt        *time.Time `json:"closed_at,omitempty"`
 }
 
 // CommentEvent is published to househero/tickets/comment_added.
-// Includes home_id and ticket_number so consumers never need a second lookup.
+// Includes the full ticket context so consumers never need a second lookup.
+// Comment-specific fields: comment_id, author, text, is_system, timestamp.
+// Ticket context fields use the same names as TicketEvent for consistency.
 type CommentEvent struct {
 	CommentID    int64     `json:"comment_id"`
 	TicketID     int64     `json:"ticket_id"`
@@ -34,15 +40,36 @@ type CommentEvent struct {
 	Text         string    `json:"text"`
 	IsSystem     bool      `json:"is_system"`
 	Timestamp    time.Time `json:"timestamp"`
+
+	// Full ticket context — same field names as TicketEvent for consistency.
+	Title           string     `json:"title"`
+	Type            string     `json:"type"`
+	Priority        string     `json:"priority"`
+	Status          string     `json:"status"`
+	Requester       string     `json:"requester"`
+	Room            string     `json:"room"`
+	Description     *string    `json:"description,omitempty"`
+	InventoryItemID *int64     `json:"inventory_item_id,omitempty"`
+	InventoryItem   *string    `json:"inventory_item,omitempty"`
+	EstimatedCost   *string    `json:"estimated_cost,omitempty"`
+	Closer          *string    `json:"closer,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	ClosedAt        *time.Time `json:"closed_at,omitempty"`
 }
 
 // InventoryEvent is published to househero/inventory/created and househero/inventory/updated.
 type InventoryEvent struct {
-	ID        int64     `json:"id"`
-	HomeID    int64     `json:"home_id"`
-	Name      string    `json:"name"`
-	Type      string    `json:"type"`
-	Make      string    `json:"make"`
-	Room      string    `json:"room"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID              int64      `json:"id"`
+	HomeID          int64      `json:"home_id"`
+	Name            string     `json:"name"`
+	Type            string     `json:"type"`
+	Make            string     `json:"make"`
+	Model           *string    `json:"model,omitempty"`
+	Room            string     `json:"room"`
+	SerialNumber    *string    `json:"serial_number,omitempty"`
+	PurchaseDate    *time.Time `json:"purchase_date,omitempty"`
+	WarrantyExpires *time.Time `json:"warranty_expires,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }

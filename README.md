@@ -181,7 +181,7 @@ MQTT is **opt-in**. Set `MQTT_BROKER` in your `.env` / environment to enable it.
 |-------|---------|---------|
 | `househero/tickets/created` | New ticket saved | Full ticket JSON |
 | `househero/tickets/updated` | Ticket updated | Full ticket JSON |
-| `househero/tickets/comment_added` | Comment added | Full comment JSON |
+| `househero/tickets/comment_added` | Comment added | Comment + full ticket JSON |
 | `househero/inventory/created` | New inventory item saved | Full item JSON |
 | `househero/inventory/updated` | Inventory item updated | Full item JSON |
 
@@ -204,8 +204,12 @@ Send a JSON payload to one of these topics; the response is published to `househ
 | `room` | — | Room/location |
 | `description` | — | Longer description |
 | `estimated_cost` | — | Cost estimate string, e.g. `"150.00"` |
+| `inventory_item_id` | — | Numeric ID of a linked inventory item; the item name is resolved automatically |
+| `inventory_item` | — | Free-text inventory item name (used when `inventory_item_id` is not provided) |
 
-Example:
+All string fields are sanitized to remove HTML tags and control characters before storage. Invalid or missing optional fields are silently left blank rather than causing an error.
+
+Example (by inventory item ID):
 
 ```json
 {
@@ -216,7 +220,23 @@ Example:
   "priority": "low",
   "requester": "Home Assistant",
   "room": "Utility Room",
-  "description": "Monthly filter replacement reminder"
+  "description": "Monthly filter replacement reminder",
+  "inventory_item_id": 7
+}
+```
+
+Example (by free-text inventory item name):
+
+```json
+{
+  "request_id": "ha-auto-002",
+  "home_id": 1,
+  "title": "Water leak detected – Kitchen",
+  "type": "emergency",
+  "priority": "critical",
+  "requester": "Home Assistant",
+  "room": "Kitchen",
+  "inventory_item": "Kitchen Sink"
 }
 ```
 
@@ -268,9 +288,11 @@ Response (published to `househero/responses/ha-query-005`):
 
 On error the response contains `{"error": "..."}`.
 
-### Home Assistant Example
+### Home Assistant Examples
 
-Below is a minimal Home Assistant automation that creates a HouseHero ticket when a sensor triggers:
+#### Example 1 — Create a ticket from a sensor trigger
+
+A minimal automation that creates a HouseHero ticket when a sensor triggers:
 
 ```yaml
 automation:
@@ -294,6 +316,131 @@ automation:
               "room": "Kitchen"
             }
 ```
+
+#### Example 2 — Notify when a new inventory item is added
+
+Subscribes to `househero/inventory/created` and sends a mobile notification:
+
+```yaml
+automation:
+  - alias: "HouseHero: New inventory item added"
+    trigger:
+      - platform: mqtt
+        topic: househero/inventory/created
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "New Inventory Item"
+          message: >
+            [Home] added {{ trigger.payload_json.name }}
+            ({{ trigger.payload_json.type }}) in {{ trigger.payload_json.room }}.
+```
+
+> Replace `notify.mobile_app_your_phone` with your actual notification service.
+> Substitute `[Home]` with a static home name or map it from `trigger.payload_json.home_id` using a template helper.
+
+#### Example 3 — Notify when a ticket is created
+
+Subscribes to `househero/tickets/created` and sends a mobile notification:
+
+```yaml
+automation:
+  - alias: "HouseHero: New ticket created"
+    trigger:
+      - platform: mqtt
+        topic: househero/tickets/created
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: "New Ticket"
+          message: >
+            [Home] added #{{ trigger.payload_json.ticket_number }}
+            {{ trigger.payload_json.title }}
+```
+
+> Substitute `[Home]` with a static home name or map it from `trigger.payload_json.home_id` using a template helper.
+
+#### Example 4 — Notify on ticket status change or human comment
+
+Subscribes to both `househero/tickets/updated` (status changes) and
+`househero/tickets/comment_added` (new comments), skipping system-generated
+comments and updates that do not change status:
+
+```yaml
+automation:
+alias: "HouseHero: Ticket status or comment"
+description: Notifies on ticket status changes or new comments
+triggers:
+  - topic: househero/tickets/updated
+    id: status_changed
+    trigger: mqtt
+  - topic: househero/tickets/comment_added
+    id: comment_added
+    trigger: mqtt
+conditions:
+  - condition: template
+    value_template: |
+      {% if trigger.id == 'status_changed' %}
+        {{ trigger.payload_json.status_new != '' and
+           trigger.payload_json.status_old != trigger.payload_json.status_new }}
+      {% else %}
+        {{ not trigger.payload_json.is_system }}
+      {% endif %}
+actions:
+  - action: notify.mobile
+    data:
+      title: HouseHero Ticket Update
+      message: |
+        {% if trigger.id == 'status_changed' %}
+          [Home] #{{ trigger.payload_json.ticket_number }}
+          {{ trigger.payload_json.title }} | {{ trigger.payload_json.status_new }}
+        {% else %}
+          [Home] #{{ trigger.payload_json.ticket_number }}
+          {{ trigger.payload_json.title }} | {{ trigger.payload_json.status }} |
+          {{ trigger.payload_json.author }} commented: {{ trigger.payload_json.text }}
+        {% endif %}
+      data:
+        tag: househero_comment
+mode: single
+
+
+```
+
+> Substitute `[Home]` with a static home name or map it from `trigger.payload_json.home_id` using a template helper.
+
+#### Example 5 — Create a ticket with a voice command
+
+Say **"Househero, create a ticket *\<title\>*"** to Home Assistant's voice
+assistant and have it publish a create-ticket command to MQTT.
+
+Home Assistant (2023.5+) supports inline conversation sentences directly in
+automations — no separate intent file is needed:
+
+```yaml
+alias: "HouseHero: Create ticket via voice"
+description: ""
+triggers:
+  - command:
+      - Househero create [a] ticket {title}
+    trigger: conversation
+actions:
+  - action: mqtt.publish
+    data:
+      topic: househero/commands/tickets/create
+      payload: |
+        {
+          "request_id": "ha-voice-{{ now().timestamp() | int }}",
+          "home_id": 1,
+          "title": "{{ trigger.slots.title }}",
+          "requester": "Voice Command",
+          "priority": "medium",
+          "room": "other",
+        }
+```
+
+> Set `home_id` to the numeric ID of your home (visible in the HouseHero URL
+> when viewing that home, or via `GET /api/homes`).  The captured phrase is
+> available as `trigger.slots.title`.
 
 ### Running Mosquitto with Docker Compose
 

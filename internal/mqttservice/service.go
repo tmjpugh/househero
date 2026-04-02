@@ -131,16 +131,21 @@ func (s *Service) subscribe(topic string, fn mqtt.MessageHandler) {
 // Expected payload:
 //
 //	{
-//	  "request_id": "optional-string",   // response will be published to househero/responses/<request_id>
-//	  "home_id":    1,                   // required
-//	  "title":      "Leaky faucet",      // required
-//	  "type":       "maintenance",       // optional, default "maintenance"
-//	  "priority":   "medium",            // optional, default "medium"
-//	  "requester":  "Alice",             // optional
-//	  "room":       "Bathroom",          // optional
-//	  "description":"...",               // optional
-//	  "estimated_cost": "150.00"         // optional
+//	  "request_id":       "optional-string",   // response will be published to househero/responses/<request_id>
+//	  "home_id":          1,                   // required
+//	  "title":            "Leaky faucet",      // required
+//	  "type":             "maintenance",       // optional, default "maintenance"
+//	  "priority":         "medium",            // optional, default "medium"
+//	  "requester":        "Alice",             // optional
+//	  "room":             "Bathroom",          // optional
+//	  "description":      "...",               // optional
+//	  "estimated_cost":   "150.00",            // optional
+//	  "inventory_item_id": 7,                  // optional; resolves item name from database
+//	  "inventory_item":   "HVAC Filter"        // optional; free-text name when no inventory_item_id
 //	}
+//
+// All string fields are sanitized to remove HTML tags and control characters.
+// Invalid or missing optional fields are silently ignored and left blank.
 func (s *Service) onCreateTicket(_ mqtt.Client, msg mqtt.Message) {
 	resp, err := s.handler.HandleCreateTicket(msg.Payload())
 	s.publishCommandResponse(msg.Payload(), resp, err)
